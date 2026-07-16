@@ -6,7 +6,7 @@ import { STAGES } from "@/lib/stages";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/projects")({
+export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
 });
 
