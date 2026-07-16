@@ -142,7 +142,7 @@ function ProjectCard({ project }: { project: ProjectRow }) {
         <div className="min-w-0">
           <h3 className="truncate font-display text-base font-semibold">{project.name}</h3>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {project.location ?? "Location TBD"}
+            {project.address ?? "Location TBD"}
           </p>
         </div>
         <StatusBadge status={project.status} />
