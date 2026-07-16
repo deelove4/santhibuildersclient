@@ -19,10 +19,10 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 interface ProjectRow {
   id: string;
   name: string;
-  location: string | null;
+  address: string | null;
   status: string;
   overall_progress: number | null;
-  current_stage: string | null;
+  current_stage_key: string | null;
   updated_at: string;
 }
 
