@@ -39,7 +39,7 @@ function DashboardPage() {
         supabase.from("user_roles").select("role").eq("user_id", user.id),
         supabase
           .from("projects")
-          .select("id, name, location, status, overall_progress, current_stage, updated_at")
+          .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
           .order("updated_at", { ascending: false })
           .limit(12),
       ]);
