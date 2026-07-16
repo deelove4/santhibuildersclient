@@ -131,7 +131,7 @@ function DashboardPage() {
 }
 
 function ProjectCard({ project }: { project: ProjectRow }) {
-  const stage = STAGES.find((s) => s.key === project.current_stage);
+  const stage = STAGES.find((s) => s.key === project.current_stage_key);
   return (
     <Link
       to="/projects/$id"
