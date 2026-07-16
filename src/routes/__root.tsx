@@ -88,10 +88,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "Track your villa build with a live timeline, engineer updates, drone photography and secure documents.",
+          "Enterprise construction management portal for Santhi Builders — track projects, timelines, media and communication in one premium workspace.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Santhi Builders — Construction Client Portal" },
+      { name: "twitter:description", content: "Enterprise construction management portal for Santhi Builders — track projects, timelines, media and communication in one premium workspace." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/942fffc9-03f9-4d76-931f-885de9507b39/id-preview-8462b02b--541480dc-d163-4f45-a923-38ca3ff1be50.lovable.app-1784185801348.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/942fffc9-03f9-4d76-931f-885de9507b39/id-preview-8462b02b--541480dc-d163-4f45-a923-38ca3ff1be50.lovable.app-1784185801348.png" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
