@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useRole } from "@/lib/use-role";
+import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
