@@ -92,7 +92,7 @@ function StageRow({
       stage_key: stage.stage_key,
       stage_name: stage.stage_name,
       stage_order: STAGES.findIndex((x) => x.key === stage.stage_key) + 1,
-      status,
+      status: status as "pending" | "in_progress" | "completed",
       progress: Math.max(0, Math.min(100, progress)),
       notes: notes.trim() || null,
       started_at: status !== "pending" ? new Date().toISOString() : null,
@@ -201,7 +201,6 @@ function StageRow({
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="in_progress">In progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
               </SelectContent>
             </Select>
           </div>
