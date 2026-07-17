@@ -27,8 +27,14 @@ function ProjectsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [userId, setUserId] = useState<string | undefined>();
+  const role = useRole(userId);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
+  }, []);
+
+  function load() {
     supabase
       .from("projects")
       .select("id, name, address, status, overall_progress, current_stage_key, villa_number, updated_at")
@@ -37,6 +43,10 @@ function ProjectsPage() {
         setRows((data ?? []) as Row[]);
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   const filtered = rows.filter(
