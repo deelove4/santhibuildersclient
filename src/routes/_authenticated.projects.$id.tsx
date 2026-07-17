@@ -67,10 +67,9 @@ function ProjectDetailPage() {
     load();
   }, [load]);
 
-  // Realtime: refresh on project, stage, media, or document changes.
   useEffect(() => {
     const channel = supabase
-      .channel(`project:${id}:${Math.random().toString(36).slice(2,10)}`)
+      .channel(`project:${id}:${Math.random().toString(36).slice(2, 10)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "projects", filter: `id=eq.${id}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_stages", filter: `project_id=eq.${id}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_media", filter: `project_id=eq.${id}` }, load)
@@ -101,20 +100,6 @@ function ProjectDetailPage() {
     );
   }
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
-      <Link
-        to="/projects"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Projects
-      </Link>
-
-      <header className="mt-4 flex flex-wrap items-start justify-between gap-4 sm:gap-6">
-        <div className="min-w-0 flex-1">
-          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-            {project.villa_number ?? "Villa"} · {project.project_type ?? "Residential"}
-          </p>
   const now = Date.now();
   const startTs = project.start_date ? new Date(project.start_date).getTime() : null;
   const endTs = project.expected_completion ? new Date(project.expected_completion).getTime() : null;
@@ -146,7 +131,6 @@ function ProjectDetailPage() {
         <ArrowLeft className="size-4" /> Projects
       </Link>
 
-      {/* Hero header */}
       <motion.header
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -184,7 +168,6 @@ function ProjectDetailPage() {
             )}
           </div>
 
-          {/* Big progress ring */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card/80 px-5 py-4 backdrop-blur-sm">
             <BigProgressRing value={project.overall_progress ?? 0} />
             <div>
@@ -216,7 +199,6 @@ function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Stage stepper preview */}
         <div className="relative mt-6 overflow-x-auto">
           <div className="flex min-w-max items-center gap-1">
             {STAGES.map((s, i) => {
@@ -240,10 +222,7 @@ function ProjectDetailPage() {
                   </div>
                   {i < STAGES.length - 1 && (
                     <div
-                      className={cn(
-                        "h-0.5 w-6 rounded-full",
-                        isDone ? "bg-primary" : "bg-border",
-                      )}
+                      className={cn("h-0.5 w-6 rounded-full", isDone ? "bg-primary" : "bg-border")}
                     />
                   )}
                 </div>
@@ -268,7 +247,9 @@ function ProjectDetailPage() {
         <MetaCard
           icon={Activity}
           label="Days remaining"
-          value={daysLeft === null ? "—" : daysLeft < 0 ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d`}
+          value={
+            daysLeft === null ? "—" : daysLeft < 0 ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d`
+          }
           tone={daysLeft !== null && daysLeft < 0 ? "destructive" : "default"}
         />
       </section>
@@ -335,7 +316,9 @@ function MetaCard({
         <div
           className={cn(
             "grid size-8 place-items-center rounded-lg",
-            tone === "destructive" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+            tone === "destructive"
+              ? "bg-destructive/10 text-destructive"
+              : "bg-primary/10 text-primary",
           )}
         >
           <Icon className="size-4" />
