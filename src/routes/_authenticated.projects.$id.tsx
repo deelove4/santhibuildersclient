@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StageManager, type Stage } from "@/components/projects/StageManager";
 import { MediaGallery } from "@/components/projects/MediaGallery";
 import { DocumentsList } from "@/components/projects/DocumentsList";
+import { ChatBox } from "@/components/projects/ChatBox";
 import {
   ProjectDetailsEditor,
   type EditableProject,
@@ -52,9 +53,23 @@ function ProjectDetailPage() {
     load();
   }, [load]);
 
+  // Realtime: refresh on project, stage, media, or document changes.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`project:${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "projects", filter: `id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_stages", filter: `project_id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_media", filter: `project_id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_documents", filter: `project_id=eq.${id}` }, load)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, load]);
+
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl px-8 py-10">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-10">
         <div className="h-8 w-40 animate-pulse rounded bg-muted/60" />
         <div className="mt-6 h-64 animate-pulse rounded-2xl bg-muted/60" />
       </div>
@@ -63,7 +78,7 @@ function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="mx-auto max-w-6xl px-8 py-16 text-center">
+      <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-8">
         <p className="text-muted-foreground">Project not found.</p>
         <Link to="/projects" className="mt-4 inline-block text-primary hover:underline">
           Back to projects
@@ -73,7 +88,7 @@ function ProjectDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
       <Link
         to="/projects"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -81,12 +96,12 @@ function ProjectDetailPage() {
         <ArrowLeft className="size-4" /> Projects
       </Link>
 
-      <header className="mt-4 flex flex-wrap items-start justify-between gap-6">
-        <div>
+      <header className="mt-4 flex flex-wrap items-start justify-between gap-4 sm:gap-6">
+        <div className="min-w-0 flex-1">
           <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
             {project.villa_number ?? "Villa"} · {project.project_type ?? "Residential"}
           </p>
-          <h1 className="mt-1 font-display text-4xl font-bold tracking-tight">{project.name}</h1>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-4xl">{project.name}</h1>
           {project.address && (
             <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="size-3.5" /> {project.address}
@@ -98,17 +113,17 @@ function ProjectDetailPage() {
             </div>
           )}
         </div>
-        <div className="rounded-2xl border border-border bg-card px-6 py-4 text-right">
+        <div className="rounded-2xl border border-border bg-card px-5 py-3 text-right sm:px-6 sm:py-4">
           <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Overall progress
           </div>
-          <div className="mt-1 font-display text-4xl font-bold text-primary tabular-nums">
+          <div className="mt-1 font-display text-3xl font-bold text-primary tabular-nums sm:text-4xl">
             {project.overall_progress}%
           </div>
         </div>
       </header>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-3">
+      <section className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4">
         <MetaCard label="Start date" value={fmt(project.start_date)} />
         <MetaCard label="Expected completion" value={fmt(project.expected_completion)} />
         <MetaCard
@@ -117,11 +132,12 @@ function ProjectDetailPage() {
         />
       </section>
 
-      <Tabs defaultValue="timeline" className="mt-12">
-        <TabsList>
+      <Tabs defaultValue="timeline" className="mt-8 sm:mt-12">
+        <TabsList className="w-full flex-wrap justify-start gap-1 sm:w-auto">
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
 
         <TabsContent value="timeline" className="mt-6">
@@ -145,6 +161,16 @@ function ProjectDetailPage() {
 
         <TabsContent value="documents" className="mt-6">
           <DocumentsList projectId={project.id} isAdmin={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-6">
+          {userId ? (
+            <ChatBox projectId={project.id} currentUserId={userId} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              Loading chat…
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

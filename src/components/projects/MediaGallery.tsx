@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Image as ImageIcon, Upload, Trash2, Film } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const MAX_BYTES = 1024 * 1024; // 1 MB
 
 interface Media {
   id: string;
@@ -28,7 +30,7 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
   const [mediaType, setMediaType] = useState("photo");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     const { data } = await supabase
       .from("project_media")
       .select("*")
@@ -48,16 +50,42 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
     } else {
       setUrls({});
     }
-  }
+  }, [projectId]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+    const channel = supabase
+      .channel(`media:${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "project_media", filter: `project_id=eq.${projectId}` },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [projectId, load]);
 
   async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
+    const picked = Array.from(e.target.files ?? []);
+    if (!picked.length) return;
+
+    const oversized = picked.filter((f) => f.size > MAX_BYTES);
+    const files = picked.filter((f) => f.size <= MAX_BYTES);
+    if (oversized.length) {
+      toast.warning(
+        `${oversized.length} file(s) skipped — max 1 MB per file. Please compress: ${oversized
+          .map((f) => f.name)
+          .slice(0, 3)
+          .join(", ")}${oversized.length > 3 ? "…" : ""}`,
+      );
+    }
+    if (!files.length) {
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     setBusy(true);
     const { data: userRes } = await supabase.auth.getUser();
     for (const file of files) {
@@ -99,7 +127,9 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-semibold">Media library</h2>
-          <p className="text-xs text-muted-foreground">Photos, drone shots, and videos of the site.</p>
+          <p className="text-xs text-muted-foreground">
+            Photos, drone shots, and videos. Max 1 MB per file.
+          </p>
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
@@ -134,7 +164,7 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
           <p className="mt-2 text-sm text-muted-foreground">No media yet.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((m) => {
             const url = urls[m.id];
             const isVideo = m.mime_type?.startsWith("video/") || m.media_type === "video";
