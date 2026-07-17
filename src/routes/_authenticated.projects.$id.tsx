@@ -1,40 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowLeft, Check, Circle, Clock, MapPin } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { STAGES } from "@/lib/stages";
-import { cn } from "@/lib/utils";
+import { useRole } from "@/lib/use-role";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StageManager, type Stage } from "@/components/projects/StageManager";
+import { MediaGallery } from "@/components/projects/MediaGallery";
+import { DocumentsList } from "@/components/projects/DocumentsList";
+import {
+  ProjectDetailsEditor,
+  type EditableProject,
+} from "@/components/projects/ProjectDetailsEditor";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   component: ProjectDetailPage,
 });
 
-interface Project {
-  id: string;
-  name: string;
-  address: string | null;
-  villa_number: string | null;
-  status: string;
+interface Project extends EditableProject {
   overall_progress: number;
   current_stage_key: string | null;
-  project_type: string | null;
-  area_sqft: number | null;
-  start_date: string | null;
-  expected_completion: string | null;
-  notes: string | null;
-}
-
-interface Stage {
-  id: string;
-  stage_key: string;
-  stage_name: string;
-  stage_order: number;
-  status: string;
-  progress: number;
-  started_at: string | null;
-  completed_at: string | null;
-  notes: string | null;
 }
 
 function ProjectDetailPage() {
@@ -42,27 +26,31 @@ function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | undefined>();
+  const role = useRole(userId);
+  const isAdmin = role === "admin";
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [{ data: p }, { data: s }] = await Promise.all([
-        supabase.from("projects").select("*").eq("id", id).maybeSingle(),
-        supabase
-          .from("project_stages")
-          .select("*")
-          .eq("project_id", id)
-          .order("stage_order", { ascending: true }),
-      ]);
-      if (cancelled) return;
-      setProject((p as Project) ?? null);
-      setStages((s as Stage[]) ?? []);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
+  }, []);
+
+  const load = useCallback(async () => {
+    const [{ data: p }, { data: s }] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", id).maybeSingle(),
+      supabase
+        .from("project_stages")
+        .select("*")
+        .eq("project_id", id)
+        .order("stage_order", { ascending: true }),
+    ]);
+    setProject((p as Project) ?? null);
+    setStages((s as Stage[]) ?? []);
+    setLoading(false);
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -84,21 +72,6 @@ function ProjectDetailPage() {
     );
   }
 
-  const orderedStages = STAGES.map(
-    (def) =>
-      stages.find((s) => s.stage_key === def.key) ?? {
-        id: def.key,
-        stage_key: def.key,
-        stage_name: def.name,
-        stage_order: 0,
-        status: "pending",
-        progress: 0,
-        started_at: null,
-        completed_at: null,
-        notes: null,
-      },
-  );
-
   return (
     <div className="mx-auto max-w-6xl px-8 py-10">
       <Link
@@ -118,6 +91,11 @@ function ProjectDetailPage() {
             <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="size-3.5" /> {project.address}
             </p>
+          )}
+          {isAdmin && (
+            <div className="mt-3">
+              <ProjectDetailsEditor project={project} onSaved={load} />
+            </div>
           )}
         </div>
         <div className="rounded-2xl border border-border bg-card px-6 py-4 text-right">
@@ -139,20 +117,36 @@ function ProjectDetailPage() {
         />
       </section>
 
-      <section className="mt-12">
-        <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="font-display text-xl font-semibold">Construction timeline</h2>
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            12 stages
-          </span>
-        </div>
+      <Tabs defaultValue="timeline" className="mt-12">
+        <TabsList>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="media">Media</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+        </TabsList>
 
-        <ol className="space-y-2">
-          {orderedStages.map((stage, i) => (
-            <StageRow key={stage.stage_key} stage={stage} index={i} />
-          ))}
-        </ol>
-      </section>
+        <TabsContent value="timeline" className="mt-6">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="font-display text-xl font-semibold">Construction timeline</h2>
+            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+              12 stages
+            </span>
+          </div>
+          <StageManager
+            projectId={project.id}
+            stages={stages}
+            isAdmin={isAdmin}
+            onChanged={load}
+          />
+        </TabsContent>
+
+        <TabsContent value="media" className="mt-6">
+          <MediaGallery projectId={project.id} isAdmin={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-6">
+          <DocumentsList projectId={project.id} isAdmin={isAdmin} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -160,62 +154,11 @@ function ProjectDetailPage() {
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        {label}
+      </div>
       <div className="mt-1.5 font-display text-lg font-semibold">{value}</div>
     </div>
-  );
-}
-
-function StageRow({ stage, index }: { stage: Stage; index: number }) {
-  const done = stage.status === "completed";
-  const active = stage.status === "in_progress";
-  return (
-    <motion.li
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.3 }}
-      className={cn(
-        "flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-colors",
-        active && "border-primary/40 bg-primary/[0.03]",
-      )}
-    >
-      <div
-        className={cn(
-          "grid size-8 shrink-0 place-items-center rounded-full font-mono text-xs font-semibold",
-          done
-            ? "bg-primary text-primary-foreground"
-            : active
-              ? "bg-primary/15 text-primary ring-2 ring-primary/30"
-              : "bg-muted text-muted-foreground",
-        )}
-      >
-        {done ? <Check className="size-4" /> : active ? <Clock className="size-4" /> : index + 1}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-display font-semibold">{stage.stage_name}</span>
-          {active && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-primary">
-              In progress
-            </span>
-          )}
-        </div>
-        {stage.notes && (
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{stage.notes}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-          <div
-            className={cn("h-full rounded-full", done ? "bg-primary" : "bg-primary/70")}
-            style={{ width: `${stage.progress}%` }}
-          />
-        </div>
-        <span className="w-10 text-right font-mono text-xs tabular-nums text-muted-foreground">
-          {stage.progress}%
-        </span>
-      </div>
-    </motion.li>
   );
 }
 
