@@ -1,8 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  CalendarCheck,
+  Ruler,
+  Activity,
+  CheckCircle2,
+  Clock3,
+  AlertTriangle,
+  TrendingUp,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/lib/use-role";
+import { STAGES } from "@/lib/stages";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StageManager, type Stage } from "@/components/projects/StageManager";
 import { MediaGallery } from "@/components/projects/MediaGallery";
