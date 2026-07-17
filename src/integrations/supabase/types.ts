@@ -49,6 +49,48 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          name: string
+          size_bytes: number | null
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          name: string
+          size_bytes?: number | null
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          name?: string
+          size_bytes?: number | null
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       engineers: {
         Row: {
           active: boolean
@@ -174,6 +216,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_active: boolean
           phone: string | null
           updated_at: string
         }
@@ -183,6 +226,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          is_active?: boolean
           phone?: string | null
           updated_at?: string
         }
@@ -192,6 +236,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_active?: boolean
           phone?: string | null
           updated_at?: string
         }
