@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useRole } from "@/lib/use-role";
+import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   component: ProjectsPage,
@@ -25,8 +27,14 @@ function ProjectsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [userId, setUserId] = useState<string | undefined>();
+  const role = useRole(userId);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
+  }, []);
+
+  function load() {
     supabase
       .from("projects")
       .select("id, name, address, status, overall_progress, current_stage_key, villa_number, updated_at")
@@ -35,6 +43,10 @@ function ProjectsPage() {
         setRows((data ?? []) as Row[]);
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   const filtered = rows.filter(
@@ -54,14 +66,17 @@ function ProjectsPage() {
           </p>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Projects</h1>
         </div>
-        <div className="relative w-full max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search projects…"
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-full max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search projects…"
+              className="pl-9"
+            />
+          </div>
+          {role === "admin" && <NewProjectDialog onCreated={load} />}
         </div>
       </header>
 
