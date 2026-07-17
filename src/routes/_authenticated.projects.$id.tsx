@@ -56,7 +56,7 @@ function ProjectDetailPage() {
   // Realtime: refresh on project, stage, media, or document changes.
   useEffect(() => {
     const channel = supabase
-      .channel(`project:${id}`)
+      .channel(`project:${id}:${Math.random().toString(36).slice(2,10)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "projects", filter: `id=eq.${id}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_stages", filter: `project_id=eq.${id}` }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_media", filter: `project_id=eq.${id}` }, load)
