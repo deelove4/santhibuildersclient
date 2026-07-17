@@ -66,14 +66,17 @@ function ProjectsPage() {
           </p>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Projects</h1>
         </div>
-        <div className="relative w-full max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search projects…"
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-full max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search projects…"
+              className="pl-9"
+            />
+          </div>
+          {role === "admin" && <NewProjectDialog onCreated={load} />}
         </div>
       </header>
 
