@@ -11,6 +11,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { cn } from "@/lib/utils";
+import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
+import { NewClientDialog } from "@/components/NewClientDialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -32,25 +34,27 @@ function DashboardPage() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  async function loadData(cancelled?: { value: boolean }) {
+    const [{ data: roles }, { data: proj }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", user.id),
+      supabase
+        .from("projects")
+        .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(12),
+    ]);
+    if (cancelled?.value) return;
+    const rs = (roles ?? []).map((r) => r.role);
+    setRole(rs.includes("admin") ? "admin" : "client");
+    setProjects((proj ?? []) as ProjectRow[]);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [{ data: roles }, { data: proj }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-        supabase
-          .from("projects")
-          .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
-          .order("updated_at", { ascending: false })
-          .limit(12),
-      ]);
-      if (cancelled) return;
-      const rs = (roles ?? []).map((r) => r.role);
-      setRole(rs.includes("admin") ? "admin" : "client");
-      setProjects((proj ?? []) as ProjectRow[]);
-      setLoading(false);
-    })();
+    const flag = { value: false };
+    loadData(flag);
     return () => {
-      cancelled = true;
+      flag.value = true;
     };
   }, [user.id]);
 
@@ -79,6 +83,12 @@ function DashboardPage() {
             {role === "admin" ? "Portfolio dashboard" : "Project dashboard"}
           </h1>
         </div>
+        {role === "admin" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <NewClientDialog onCreated={() => loadData()} />
+            <NewProjectDialog onCreated={() => loadData()} />
+          </div>
+        )}
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
