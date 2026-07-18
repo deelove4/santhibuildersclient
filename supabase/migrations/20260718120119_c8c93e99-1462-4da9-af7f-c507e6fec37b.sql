@@ -1,0 +1,1 @@
+ALTER VIEW public.engineers_public SET (security_invoker = true);
