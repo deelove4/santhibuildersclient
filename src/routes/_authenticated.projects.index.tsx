@@ -485,11 +485,11 @@ function TimelineView({ rows }: { rows: Row[] }) {
       <div className="overflow-x-auto">
         <div className="min-w-[760px]">
           {/* Month header */}
-          <div className="sticky top-0 z-10 grid border-b border-border bg-muted/40" style={{ gridTemplateColumns: "220px 1fr" }}>
-            <div className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <div className="sticky top-0 z-10 flex border-b border-border bg-muted/40">
+            <div className="w-[220px] shrink-0 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Project
             </div>
-            <div className="relative flex">
+            <div className="flex flex-1">
               {months.map((m, i) => (
                 <div
                   key={i}
@@ -500,24 +500,43 @@ function TimelineView({ rows }: { rows: Row[] }) {
               ))}
             </div>
           </div>
-          {/* Rows */}
-          <div className="relative">
-            {showNow && (
-              <div
-                className="pointer-events-none absolute top-0 bottom-0 w-px bg-accent/70"
-                style={{ left: `calc(220px + ${nowPct}% * ((100% - 220px) / 100))` }}
-                aria-hidden
-              />
-            )}
-            {rows.map((r) => (
-              <TimelineRow
-                key={r.id}
-                row={r}
-                minTs={minTs}
-                span={span}
-                monthCount={months.length}
-              />
-            ))}
+
+          {/* Body */}
+          <div className="flex">
+            <div className="w-[220px] shrink-0">
+              {rows.map((r) => (
+                <Link
+                  key={r.id}
+                  to="/projects/$id"
+                  params={{ id: r.id }}
+                  className="block border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/20"
+                >
+                  <div className="truncate font-display text-sm font-semibold hover:text-primary">
+                    {r.name}
+                  </div>
+                  <div className="truncate text-[11px] text-muted-foreground">
+                    {r.villa_number ? `${r.villa_number} · ` : ""}
+                    {r.address ?? "—"}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="relative flex-1">
+              {showNow && (
+                <div
+                  className="pointer-events-none absolute top-0 bottom-0 w-px bg-accent/80"
+                  style={{ left: `${nowPct}%` }}
+                  aria-hidden
+                >
+                  <span className="absolute -top-0.5 -translate-x-1/2 rounded-sm bg-accent px-1 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-accent-foreground">
+                    Now
+                  </span>
+                </div>
+              )}
+              {rows.map((r) => (
+                <TimelineBar key={r.id} row={r} minTs={minTs} span={span} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -525,7 +544,7 @@ function TimelineView({ rows }: { rows: Row[] }) {
   );
 }
 
-function TimelineRow({
+function TimelineBar({
   row,
   minTs,
   span,
@@ -533,7 +552,6 @@ function TimelineRow({
   row: Row;
   minTs: number;
   span: number;
-  monthCount: number;
 }) {
   const startTs = row.start_date ? new Date(row.start_date).getTime() : null;
   const endTs = row.expected_completion ? new Date(row.expected_completion).getTime() : null;
@@ -553,50 +571,32 @@ function TimelineRow({
           : "bg-primary";
 
   return (
-    <div
-      className="grid items-center border-b border-border last:border-b-0 hover:bg-muted/20"
-      style={{ gridTemplateColumns: "220px 1fr" }}
-    >
-      <Link
-        to="/projects/$id"
-        params={{ id: row.id }}
-        className="min-w-0 px-4 py-3"
-      >
-        <div className="truncate font-display text-sm font-semibold hover:text-primary">
-          {row.name}
+    <div className="relative h-[62px] border-b border-border last:border-b-0">
+      {has ? (
+        <Link
+          to="/projects/$id"
+          params={{ id: row.id }}
+          className={cn(
+            "group absolute top-1/2 -translate-y-1/2 flex h-7 items-center overflow-hidden rounded-md text-[11px] font-medium text-primary-foreground shadow-sm transition-all hover:h-8",
+            barTone,
+          )}
+          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+          title={`${new Date(startTs!).toLocaleDateString()} → ${new Date(endTs!).toLocaleDateString()}`}
+        >
+          <div
+            className="h-full bg-black/20"
+            style={{ width: `${row.overall_progress}%` }}
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-2">
+            <span className="truncate">{row.overall_progress}%</span>
+            {late && <AlertTriangle className="size-3 shrink-0" />}
+          </span>
+        </Link>
+      ) : (
+        <div className="absolute inset-y-0 left-3 flex items-center text-[11px] text-muted-foreground">
+          No dates set
         </div>
-        <div className="truncate text-[11px] text-muted-foreground">
-          {row.villa_number ? `${row.villa_number} · ` : ""}
-          {row.address ?? "—"}
-        </div>
-      </Link>
-      <div className="relative h-14">
-        {has ? (
-          <Link
-            to="/projects/$id"
-            params={{ id: row.id }}
-            className={cn(
-              "group absolute top-1/2 -translate-y-1/2 flex h-7 items-center overflow-hidden rounded-md text-[11px] font-medium text-primary-foreground shadow-sm transition-all hover:h-8",
-              barTone,
-            )}
-            style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-            title={`${new Date(startTs!).toLocaleDateString()} → ${new Date(endTs!).toLocaleDateString()}`}
-          >
-            <div
-              className="h-full bg-black/20"
-              style={{ width: `${row.overall_progress}%` }}
-            />
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-2">
-              <span className="truncate">{row.overall_progress}%</span>
-              {late && <AlertTriangle className="size-3 shrink-0" />}
-            </span>
-          </Link>
-        ) : (
-          <div className="absolute inset-y-0 left-3 flex items-center text-[11px] text-muted-foreground">
-            No dates set
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
