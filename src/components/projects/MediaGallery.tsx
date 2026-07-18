@@ -55,7 +55,7 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
   useEffect(() => {
     load();
     const channel = supabase
-      .channel(`media:${projectId}:${Math.random().toString(36).slice(2,10)}`)
+      .channel(`media:${projectId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "project_media", filter: `project_id=eq.${projectId}` },
