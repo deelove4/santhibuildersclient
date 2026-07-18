@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AppSidebar, MobileTopBar, DesktopTopBar, useProfile } from "@/components/app-sidebar";
+import { AppSidebar, useProfile } from "@/components/app-sidebar";
 import type { AppRole } from "@/lib/use-auth";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -30,22 +30,11 @@ function AuthenticatedLayout() {
       });
   }, [user.id]);
 
-  const sidebarProps = {
-    role,
-    email: user.email ?? null,
-    fullName: profile?.full_name ?? null,
-    userId: user.id,
-  };
-
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
-      <AppSidebar {...sidebarProps} />
-      <main className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden">
-        <MobileTopBar {...sidebarProps} />
-        <DesktopTopBar userId={user.id} />
-        <div className="flex-1">
-          <Outlet />
-        </div>
+      <AppSidebar role={role} email={user.email ?? null} fullName={profile?.full_name ?? null} />
+      <main className="min-w-0 flex-1 overflow-x-hidden">
+        <Outlet />
       </main>
     </div>
   );

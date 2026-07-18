@@ -1,33 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import {
-  Building2,
-  Search,
-  X,
-  LayoutGrid,
-  List,
-  GanttChartSquare,
-  MapPin,
-  CalendarDays,
-  TrendingUp,
-  Sparkles,
-  ArrowUpRight,
-  CheckCircle2,
-  Clock3,
-  AlertTriangle,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/lib/use-role";
 import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
@@ -44,30 +20,13 @@ interface Row {
   overall_progress: number;
   current_stage_key: string | null;
   villa_number: string | null;
-  client_id: string;
-  start_date: string | null;
-  expected_completion: string | null;
   updated_at: string;
 }
 
-interface ClientOpt {
-  id: string;
-  full_name: string | null;
-  email: string;
-}
-
-const STATUS_OPTIONS = ["all", "planning", "active", "on_hold", "handover", "completed"];
-
 function ProjectsPage() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [clients, setClients] = useState<ClientOpt[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("all");
-  const [clientId, setClientId] = useState("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [view, setView] = useState<"list" | "kanban" | "timeline">("list");
   const [userId, setUserId] = useState<string | undefined>();
   const role = useRole(userId);
 
@@ -78,9 +37,7 @@ function ProjectsPage() {
   function load() {
     supabase
       .from("projects")
-      .select(
-        "id, name, address, status, overall_progress, current_stage_key, villa_number, client_id, start_date, expected_completion, updated_at",
-      )
+      .select("id, name, address, status, overall_progress, current_stage_key, villa_number, updated_at")
       .order("updated_at", { ascending: false })
       .then(({ data }) => {
         setRows((data ?? []) as Row[]);
@@ -90,743 +47,112 @@ function ProjectsPage() {
 
   useEffect(() => {
     load();
-    const channel = supabase
-      .channel(`projects-list:${Math.random().toString(36).slice(2, 10)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, load)
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
-  useEffect(() => {
-    if (role !== "admin") return;
-    supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "client")
-      .then(async ({ data: r }) => {
-        const ids = (r ?? []).map((x) => x.user_id);
-        if (!ids.length) return setClients([]);
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", ids)
-          .order("full_name");
-        setClients((data ?? []) as ClientOpt[]);
-      });
-  }, [role]);
-
-  const filtered = useMemo(() => {
-    const fromTs = from ? new Date(from).getTime() : null;
-    const toTs = to ? new Date(to).getTime() + 24 * 60 * 60 * 1000 : null;
-    return rows.filter((r) => {
-      if (status !== "all" && r.status !== status) return false;
-      if (clientId !== "all" && r.client_id !== clientId) return false;
-      if (fromTs || toTs) {
-        const ts = r.start_date ? new Date(r.start_date).getTime() : null;
-        if (!ts) return false;
-        if (fromTs && ts < fromTs) return false;
-        if (toTs && ts > toTs) return false;
-      }
-      if (q) {
-        const needle = q.toLowerCase();
-        const hay = `${r.name} ${r.address ?? ""} ${r.villa_number ?? ""}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [rows, q, status, clientId, from, to]);
-
-  const stats = useMemo(() => {
-    const total = rows.length;
-    const active = rows.filter((r) => r.status === "active").length;
-    const nearing = rows.filter((r) => (r.overall_progress ?? 0) >= 80 && r.status !== "completed").length;
-    const avg = total ? Math.round(rows.reduce((s, r) => s + (r.overall_progress ?? 0), 0) / total) : 0;
-    return { total, active, nearing, avg };
-  }, [rows]);
-
-  const activeFilters =
-    (status !== "all" ? 1 : 0) + (clientId !== "all" ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0);
-
-  function clearFilters() {
-    setStatus("all");
-    setClientId("all");
-    setFrom("");
-    setTo("");
-    setQ("");
-  }
+  const filtered = rows.filter(
+    (r) =>
+      !q ||
+      r.name.toLowerCase().includes(q.toLowerCase()) ||
+      (r.address ?? "").toLowerCase().includes(q.toLowerCase()) ||
+      (r.villa_number ?? "").toLowerCase().includes(q.toLowerCase()),
+  );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-10">
-      {/* Hero header */}
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-6 sm:p-8">
-        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-16 size-64 rounded-full bg-accent/10 blur-3xl" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              Portfolio · Live
-            </p>
-            <h1 className="mt-1 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              {role === "admin" ? "All construction projects" : "Your projects"}
-            </h1>
-            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Track progress across every stage in real time — from site prep to handover.
-            </p>
-          </div>
-          {role === "admin" && <NewProjectDialog onCreated={load} />}
+    <div className="mx-auto max-w-7xl px-8 py-10">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+            Portfolio
+          </p>
+          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Projects</h1>
         </div>
-
-        <div className="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <MiniStat icon={Building2} label="Total" value={stats.total} />
-          <MiniStat icon={TrendingUp} label="Active" value={stats.active} tone="primary" />
-          <MiniStat icon={Sparkles} label="Nearing handover" value={stats.nearing} tone="accent" />
-          <MiniStat icon={Clock3} label="Avg. progress" value={`${stats.avg}%`} />
-        </div>
-      </div>
-
-      {/* Filter bar */}
-      <div className="mt-6 rounded-2xl border border-border bg-card p-3 sm:p-4">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_170px_200px_140px_140px_auto]">
-          <div className="relative">
+        <div className="flex items-center gap-2">
+          <div className="relative w-full max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name, villa #, address…"
+              placeholder="Search projects…"
               className="pl-9"
             />
           </div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s} className="capitalize">
-                  {s === "all" ? "All statuses" : s.replace("_", " ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {role === "admin" ? (
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Client" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All clients</SelectItem>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.full_name || c.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="hidden lg:block" />
-          )}
-          <Input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            placeholder="From"
-          />
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} placeholder="To" />
-          <div className="flex items-center gap-2">
-            {(activeFilters > 0 || q) && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="mr-1 size-4" /> Clear
-              </Button>
-            )}
-            <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-border">
-              {(
-                [
-                  { key: "list", icon: List, label: "List view" },
-                  { key: "kanban", icon: LayoutGrid, label: "Kanban view" },
-                  { key: "timeline", icon: GanttChartSquare, label: "Timeline view" },
-                ] as const
-              ).map((v) => (
-                <button
-                  key={v.key}
-                  onClick={() => setView(v.key)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium transition-colors",
-                    view === v.key
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                  aria-label={v.label}
-                  aria-pressed={view === v.key}
-                >
-                  <v.icon className="size-4" />
-                  <span className="hidden sm:inline capitalize">{v.key}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          {role === "admin" && <NewProjectDialog onCreated={load} />}
         </div>
-      </div>
+      </header>
 
-      {/* Results */}
-      <div className="mt-6">
-        {loading ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-56 animate-pulse rounded-2xl bg-muted/60" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/50 p-16 text-center">
-            <Building2 className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">No projects match your filters.</p>
-          </div>
-        ) : view === "kanban" ? (
-          <KanbanView rows={filtered} />
-        ) : view === "timeline" ? (
-          <TimelineView rows={filtered} />
-        ) : (
-          <ListView rows={filtered} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-const KANBAN_COLUMNS: { key: string; label: string }[] = [
-  { key: "planning", label: "Planning" },
-  { key: "active", label: "Active" },
-  { key: "on_hold", label: "On Hold" },
-  { key: "handover", label: "Handover" },
-  { key: "completed", label: "Completed" },
-];
-
-function KanbanView({ rows }: { rows: Row[] }) {
-  const grouped = useMemo(() => {
-    const g: Record<string, Row[]> = {};
-    for (const col of KANBAN_COLUMNS) g[col.key] = [];
-    for (const r of rows) {
-      (g[r.status] ??= []).push(r);
-    }
-    return g;
-  }, [rows]);
-
-  return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-      <div className="flex min-w-full gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {KANBAN_COLUMNS.map((col) => {
-          const items = grouped[col.key] ?? [];
-          return (
-            <div
-              key={col.key}
-              className="flex w-72 shrink-0 flex-col rounded-2xl border border-border bg-muted/30 p-3 sm:w-auto"
-            >
-              <div className="mb-3 flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <StatusPill status={col.key} />
-                </div>
-                <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                  {items.length}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2">
-                {items.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/70 bg-card/50 p-4 text-center text-[11px] text-muted-foreground">
-                    Empty
-                  </div>
-                ) : (
-                  items.map((r, i) => <KanbanCard key={r.id} row={r} index={i} />)
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function KanbanCard({ row, index }: { row: Row; index: number }) {
-  const stage = STAGES.find((s) => s.key === row.current_stage_key);
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.03, 0.2), duration: 0.25 }}
-    >
-      <Link
-        to="/projects/$id"
-        params={{ id: row.id }}
-        className="group block rounded-xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--shadow-soft)]"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            {row.villa_number && (
-              <span className="mb-1 inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {row.villa_number}
-              </span>
-            )}
-            <h4 className="truncate font-display text-sm font-semibold group-hover:text-primary">
-              {row.name}
-            </h4>
-            {row.address && (
-              <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-                <MapPin className="size-3 shrink-0" /> {row.address}
-              </p>
-            )}
-          </div>
-          <span className="shrink-0 font-mono text-[11px] font-bold tabular-nums text-primary">
-            {row.overall_progress}%
-          </span>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-muted/60" />
+          ))}
         </div>
-        <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary"
-            style={{ width: `${row.overall_progress}%` }}
-          />
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-16 text-center">
+          <Building2 className="mx-auto size-8 text-muted-foreground" />
+          <p className="mt-3 text-sm text-muted-foreground">No projects found.</p>
         </div>
-        <p className="mt-2 truncate text-[11px] text-muted-foreground">
-          {stage?.short ?? "Not started"}
-        </p>
-      </Link>
-    </motion.div>
-  );
-}
-
-function ListView({ rows }: { rows: Row[] }) {
-  return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-      <table className="w-full min-w-[720px] text-sm">
-        <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          <tr>
-            <th className="px-5 py-3">Project</th>
-            <th className="px-5 py-3">Stage</th>
-            <th className="px-5 py-3">Progress</th>
-            <th className="px-5 py-3">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const stage = STAGES.find((s) => s.key === r.current_stage_key);
-            return (
-              <tr
-                key={r.id}
-                className="group border-b border-border transition-colors last:border-b-0 hover:bg-muted/30"
-              >
-                <td className="px-5 py-4">
-                  <Link to="/projects/$id" params={{ id: r.id }} className="block">
-                    <div className="font-display font-semibold group-hover:text-primary">
-                      {r.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.villa_number ? `${r.villa_number} · ` : ""}
-                      {r.address ?? "—"}
-                    </div>
-                  </Link>
-                </td>
-                <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${r.overall_progress}%` }}
-                      />
-                    </div>
-                    <span className="font-mono text-xs tabular-nums">{r.overall_progress}%</span>
-                  </div>
-                </td>
-                <td className="px-5 py-4">
-                  <StatusPill status={r.status} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function TimelineView({ rows }: { rows: Row[] }) {
-  const { minTs, maxTs, months } = useMemo(() => {
-    const now = Date.now();
-    const stamps: number[] = [];
-    for (const r of rows) {
-      if (r.start_date) stamps.push(new Date(r.start_date).getTime());
-      if (r.expected_completion) stamps.push(new Date(r.expected_completion).getTime());
-    }
-    if (!stamps.length) {
-      stamps.push(now - 60 * 86400000, now + 120 * 86400000);
-    }
-    const min = new Date(Math.min(...stamps));
-    const max = new Date(Math.max(...stamps));
-    min.setDate(1);
-    max.setMonth(max.getMonth() + 1, 1);
-    const ms: { ts: number; label: string }[] = [];
-    const cur = new Date(min);
-    while (cur.getTime() < max.getTime()) {
-      ms.push({
-        ts: cur.getTime(),
-        label: cur.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
-      });
-      cur.setMonth(cur.getMonth() + 1);
-    }
-    return { minTs: min.getTime(), maxTs: max.getTime(), months: ms };
-  }, [rows]);
-
-  const span = Math.max(1, maxTs - minTs);
-  const nowPct = ((Date.now() - minTs) / span) * 100;
-  const showNow = nowPct >= 0 && nowPct <= 100;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="overflow-x-auto">
-        <div className="min-w-[760px]">
-          {/* Month header */}
-          <div className="sticky top-0 z-10 flex border-b border-border bg-muted/40">
-            <div className="w-[220px] shrink-0 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Project
-            </div>
-            <div className="flex flex-1">
-              {months.map((m, i) => (
-                <div
-                  key={i}
-                  className="flex-1 border-l border-border px-2 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
-                >
-                  {m.label}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="flex">
-            <div className="w-[220px] shrink-0">
-              {rows.map((r) => (
-                <Link
-                  key={r.id}
-                  to="/projects/$id"
-                  params={{ id: r.id }}
-                  className="block border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/20"
-                >
-                  <div className="truncate font-display text-sm font-semibold hover:text-primary">
-                    {r.name}
-                  </div>
-                  <div className="truncate text-[11px] text-muted-foreground">
-                    {r.villa_number ? `${r.villa_number} · ` : ""}
-                    {r.address ?? "—"}
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <div className="relative flex-1">
-              {showNow && (
-                <div
-                  className="pointer-events-none absolute top-0 bottom-0 w-px bg-accent/80"
-                  style={{ left: `${nowPct}%` }}
-                  aria-hidden
-                >
-                  <span className="absolute -top-0.5 -translate-x-1/2 rounded-sm bg-accent px-1 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-accent-foreground">
-                    Now
-                  </span>
-                </div>
-              )}
-              {rows.map((r) => (
-                <TimelineBar key={r.id} row={r} minTs={minTs} span={span} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TimelineBar({
-  row,
-  minTs,
-  span,
-}: {
-  row: Row;
-  minTs: number;
-  span: number;
-}) {
-  const startTs = row.start_date ? new Date(row.start_date).getTime() : null;
-  const endTs = row.expected_completion ? new Date(row.expected_completion).getTime() : null;
-  const has = startTs !== null && endTs !== null && endTs > startTs;
-  const leftPct = has ? Math.max(0, ((startTs! - minTs) / span) * 100) : 0;
-  const widthPct = has ? Math.max(2, ((endTs! - startTs!) / span) * 100) : 0;
-
-  const now = Date.now();
-  const late = endTs !== null && now > endTs && row.status !== "completed";
-  const barTone =
-    row.status === "completed"
-      ? "bg-emerald-500"
-      : late
-        ? "bg-destructive"
-        : row.status === "on_hold"
-          ? "bg-amber-500"
-          : "bg-primary";
-
-  return (
-    <div className="relative h-[62px] border-b border-border last:border-b-0">
-      {has ? (
-        <Link
-          to="/projects/$id"
-          params={{ id: row.id }}
-          className={cn(
-            "group absolute top-1/2 -translate-y-1/2 flex h-7 items-center overflow-hidden rounded-md text-[11px] font-medium text-primary-foreground shadow-sm transition-all hover:h-8",
-            barTone,
-          )}
-          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-          title={`${new Date(startTs!).toLocaleDateString()} → ${new Date(endTs!).toLocaleDateString()}`}
-        >
-          <div
-            className="h-full bg-black/20"
-            style={{ width: `${row.overall_progress}%` }}
-          />
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-2">
-            <span className="truncate">{row.overall_progress}%</span>
-            {late && <AlertTriangle className="size-3 shrink-0" />}
-          </span>
-        </Link>
       ) : (
-        <div className="absolute inset-y-0 left-3 flex items-center text-[11px] text-muted-foreground">
-          No dates set
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">Project</th>
+                <th className="px-5 py-3">Stage</th>
+                <th className="px-5 py-3">Progress</th>
+                <th className="px-5 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => {
+                const stage = STAGES.find((s) => s.key === r.current_stage_key);
+                return (
+                  <tr
+                    key={r.id}
+                    className="group border-b border-border last:border-b-0 transition-colors hover:bg-muted/30"
+                  >
+                    <td className="px-5 py-4">
+                      <Link
+                        to="/projects/$id"
+                        params={{ id: r.id }}
+                        className="block"
+                      >
+                        <div className="font-display font-semibold group-hover:text-primary">{r.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {r.villa_number ? `${r.villa_number} · ` : ""}
+                          {r.address ?? "—"}
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${r.overall_progress}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-xs tabular-nums">{r.overall_progress}%</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest",
+                          statusStyles(r.status),
+                        )}
+                      >
+                        {r.status.replace("_", " ")}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
-  );
-}
-
-function MiniStat({
-  icon: Icon,
-  label,
-  value,
-  tone = "default",
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string | number;
-  tone?: "default" | "primary" | "accent";
-}) {
-  const toneClass =
-    tone === "primary"
-      ? "bg-primary/10 text-primary"
-      : tone === "accent"
-        ? "bg-accent/15 text-accent-foreground"
-        : "bg-muted text-muted-foreground";
-  return (
-    <div className="rounded-xl border border-border bg-card/70 p-3 backdrop-blur-sm sm:p-4">
-      <div className="flex items-center gap-2">
-        <div className={cn("grid size-7 place-items-center rounded-lg", toneClass)}>
-          <Icon className="size-3.5" />
-        </div>
-        <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
-      </div>
-      <div className="mt-2 font-display text-2xl font-bold tabular-nums">{value}</div>
-    </div>
-  );
-}
-
-function ProjectCard({ row, index }: { row: Row; index: number }) {
-  const stage = STAGES.find((s) => s.key === row.current_stage_key);
-  const stageIdx = STAGES.findIndex((s) => s.key === row.current_stage_key);
-  const nextStage = stageIdx >= 0 && stageIdx < STAGES.length - 1 ? STAGES[stageIdx + 1] : null;
-
-  const now = Date.now();
-  const startTs = row.start_date ? new Date(row.start_date).getTime() : null;
-  const endTs = row.expected_completion ? new Date(row.expected_completion).getTime() : null;
-  const daysLeft = endTs ? Math.round((endTs - now) / 86400000) : null;
-  const health: "on_track" | "warning" | "late" | "done" =
-    row.status === "completed"
-      ? "done"
-      : daysLeft === null
-        ? "on_track"
-        : daysLeft < 0
-          ? "late"
-          : daysLeft < 14
-            ? "warning"
-            : "on_track";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.04, 0.3), duration: 0.35 }}
-    >
-      <Link
-        to="/projects/$id"
-        params={{ id: row.id }}
-        className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--shadow-elevated)]"
-      >
-        {/* Accent stripe based on health */}
-        <div
-          className={cn(
-            "absolute inset-x-0 top-0 h-1",
-            health === "done"
-              ? "bg-emerald-500"
-              : health === "late"
-                ? "bg-destructive"
-                : health === "warning"
-                  ? "bg-warning"
-                  : "bg-primary",
-          )}
-        />
-
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              {row.villa_number && (
-                <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {row.villa_number}
-                </span>
-              )}
-              <StatusPill status={row.status} />
-            </div>
-            <h3 className="mt-2 truncate font-display text-lg font-semibold group-hover:text-primary">
-              {row.name}
-            </h3>
-            {row.address && (
-              <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground">
-                <MapPin className="size-3 shrink-0" /> {row.address}
-              </p>
-            )}
-          </div>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
-        </div>
-
-        {/* Progress ring + stage */}
-        <div className="mt-5 flex items-center gap-4">
-          <ProgressRing value={row.overall_progress ?? 0} />
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Current stage
-            </p>
-            <p className="mt-0.5 truncate text-sm font-semibold">
-              {stage?.short ?? "Not started"}
-            </p>
-            {nextStage && (
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                Next: {nextStage.short}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Mini stage dots */}
-        <div className="mt-4 flex gap-1">
-          {STAGES.map((_, i) => {
-            const active = stageIdx >= 0 && i <= stageIdx;
-            return (
-              <div
-                key={i}
-                className={cn(
-                  "h-1 flex-1 rounded-full transition-colors",
-                  active ? "bg-primary" : "bg-muted",
-                )}
-              />
-            );
-          })}
-        </div>
-
-        {/* Footer meta */}
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="size-3.5" />
-            {startTs ? new Date(startTs).toLocaleDateString(undefined, { month: "short", day: "2-digit" }) : "TBD"}
-            {" → "}
-            {endTs ? new Date(endTs).toLocaleDateString(undefined, { month: "short", day: "2-digit" }) : "TBD"}
-          </span>
-          <HealthBadge health={health} daysLeft={daysLeft} />
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-function ProgressRing({ value }: { value: number }) {
-  const size = 56;
-  const stroke = 5;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const offset = c - (Math.max(0, Math.min(100, value)) / 100) * c;
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--muted)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--primary)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          className="transition-all duration-500"
-        />
-      </svg>
-      <span className="absolute inset-0 grid place-items-center font-mono text-xs font-bold tabular-nums">
-        {value}%
-      </span>
-    </div>
-  );
-}
-
-function HealthBadge({
-  health,
-  daysLeft,
-}: {
-  health: "on_track" | "warning" | "late" | "done";
-  daysLeft: number | null;
-}) {
-  if (health === "done")
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-        <CheckCircle2 className="size-3" /> Done
-      </span>
-    );
-  if (health === "late")
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-destructive">
-        <AlertTriangle className="size-3" /> {Math.abs(daysLeft ?? 0)}d late
-      </span>
-    );
-  if (health === "warning")
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-warning/20 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-warning-foreground">
-        <Clock3 className="size-3" /> {daysLeft}d left
-      </span>
-    );
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-primary">
-      <TrendingUp className="size-3" /> {daysLeft !== null ? `${daysLeft}d left` : "On track"}
-    </span>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider",
-        statusStyles(status),
-      )}
-    >
-      <span className={cn("size-1.5 rounded-full", statusDot(status))} />
-      {status.replace("_", " ")}
-    </span>
   );
 }
 
@@ -842,20 +168,5 @@ function statusStyles(status: string) {
       return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
     default:
       return "bg-muted text-muted-foreground";
-  }
-}
-
-function statusDot(status: string) {
-  switch (status) {
-    case "active":
-      return "bg-primary animate-pulse";
-    case "on_hold":
-      return "bg-amber-500";
-    case "handover":
-      return "bg-accent";
-    case "completed":
-      return "bg-emerald-500";
-    default:
-      return "bg-muted-foreground";
   }
 }

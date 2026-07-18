@@ -7,8 +7,7 @@ import {
   LogOut,
   Sun,
   Moon,
-  FileStack,
-  Menu,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,36 +15,25 @@ import { useTheme } from "@/lib/theme";
 import type { AppRole } from "@/lib/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { NotificationsBell } from "@/components/NotificationsBell";
 
 interface Props {
   role: AppRole | null;
   email: string | null;
   fullName: string | null;
-  userId: string;
 }
 
-function useNavItems(role: AppRole | null) {
-  return [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/projects", label: "Projects", icon: Building2 },
-    ...(role === "admin"
-      ? [
-          { to: "/clients", label: "Clients", icon: Users },
-          { to: "/templates", label: "Templates", icon: FileStack },
-        ]
-      : []),
-    { to: "/settings", label: "Settings", icon: Settings },
-  ] as const;
-}
-
-function SidebarInner({ role, email, fullName, onNavigate }: Props & { onNavigate?: () => void }) {
+export function AppSidebar({ role, email, fullName }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
   const [signingOut, setSigningOut] = useState(false);
-  const items = useNavItems(role);
+
+  const items = [
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/projects", label: "Projects", icon: Building2 },
+    ...(role === "admin" ? [{ to: "/clients", label: "Clients", icon: Users }] : []),
+    { to: "/settings", label: "Settings", icon: Settings },
+  ] as const;
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -54,7 +42,7 @@ function SidebarInner({ role, email, fullName, onNavigate }: Props & { onNavigat
   }
 
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <div className="grid size-8 place-items-center rounded-lg bg-primary font-display font-bold text-primary-foreground">
           S
@@ -74,7 +62,6 @@ function SidebarInner({ role, email, fullName, onNavigate }: Props & { onNavigat
             <Link
               key={it.to}
               to={it.to}
-              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
@@ -118,49 +105,7 @@ function SidebarInner({ role, email, fullName, onNavigate }: Props & { onNavigat
           </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-export function AppSidebar(props: Props) {
-  return (
-    <aside className="hidden h-screen w-64 shrink-0 border-r border-sidebar-border lg:block">
-      <SidebarInner {...props} />
     </aside>
-  );
-}
-
-export function MobileTopBar(props: Props) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-background/80 px-4 py-2 backdrop-blur lg:hidden">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Menu">
-            <Menu className="size-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarInner {...props} onNavigate={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
-      <div className="flex items-center gap-1.5">
-        <div className="grid size-7 place-items-center rounded-md bg-primary font-display text-xs font-bold text-primary-foreground">
-          S
-        </div>
-        <span className="font-display text-sm font-semibold">Santhi Builders</span>
-      </div>
-      <NotificationsBell userId={props.userId} />
-    </div>
-  );
-}
-
-export function DesktopTopBar({ userId }: { userId: string }) {
-  return (
-    <div className="hidden items-center justify-end border-b border-border bg-background/80 px-6 py-2 backdrop-blur lg:flex">
-      <NotificationsBell userId={userId} />
-    </div>
   );
 }
 
