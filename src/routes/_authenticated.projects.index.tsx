@@ -282,65 +282,12 @@ function ProjectsPage() {
             <Building2 className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">No projects match your filters.</p>
           </div>
-        ) : view === "grid" ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((r, i) => (
-              <ProjectCard key={r.id} row={r} index={i} />
-            ))}
-          </div>
+        ) : view === "kanban" ? (
+          <KanbanView rows={filtered} />
+        ) : view === "timeline" ? (
+          <TimelineView rows={filtered} />
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                <tr>
-                  <th className="px-5 py-3">Project</th>
-                  <th className="px-5 py-3">Stage</th>
-                  <th className="px-5 py-3">Progress</th>
-                  <th className="px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const stage = STAGES.find((s) => s.key === r.current_stage_key);
-                  return (
-                    <tr
-                      key={r.id}
-                      className="group border-b border-border transition-colors last:border-b-0 hover:bg-muted/30"
-                    >
-                      <td className="px-5 py-4">
-                        <Link to="/projects/$id" params={{ id: r.id }} className="block">
-                          <div className="font-display font-semibold group-hover:text-primary">
-                            {r.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {r.villa_number ? `${r.villa_number} · ` : ""}
-                            {r.address ?? "—"}
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${r.overall_progress}%` }}
-                            />
-                          </div>
-                          <span className="font-mono text-xs tabular-nums">
-                            {r.overall_progress}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusPill status={r.status} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ListView rows={filtered} />
         )}
       </div>
     </div>
