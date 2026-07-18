@@ -516,13 +516,6 @@ export type Database = {
             referencedRelation: "engineers"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "projects_engineer_id_fkey"
-            columns: ["engineer_id"]
-            isOneToOne: false
-            referencedRelation: "engineers_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -548,33 +541,20 @@ export type Database = {
       }
     }
     Views: {
-      engineers_public: {
-        Row: {
-          active: boolean | null
-          avatar_url: string | null
-          id: string | null
-          name: string | null
-          specialization: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          avatar_url?: string | null
-          id?: string | null
-          name?: string | null
-          specialization?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          avatar_url?: string | null
-          id?: string | null
-          name?: string | null
-          specialization?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "client"
