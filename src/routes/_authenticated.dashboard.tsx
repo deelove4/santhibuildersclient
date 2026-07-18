@@ -127,7 +127,7 @@ function DashboardPage() {
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <EmptyProjects role={role} />
+          <EmptyProjects role={role} onCreated={() => loadData()} />
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {projects.slice(0, 6).map((p) => (
@@ -197,7 +197,13 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function EmptyProjects({ role }: { role: "admin" | "client" | null }) {
+function EmptyProjects({
+  role,
+  onCreated,
+}: {
+  role: "admin" | "client" | null;
+  onCreated: () => void;
+}) {
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
       <Building2 className="mx-auto size-8 text-muted-foreground" />
@@ -207,6 +213,12 @@ function EmptyProjects({ role }: { role: "admin" | "client" | null }) {
           ? "Create your first project and assign a client to get started."
           : "Your project will appear here as soon as your Santhi Builders team sets it up."}
       </p>
+      {role === "admin" && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <NewClientDialog onCreated={onCreated} />
+          <NewProjectDialog onCreated={onCreated} />
+        </div>
+      )}
     </div>
   );
 }
