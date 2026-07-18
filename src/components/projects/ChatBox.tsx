@@ -54,7 +54,7 @@ export function ChatBox({ projectId, currentUserId }: { projectId: string; curre
     })();
 
     const channel = supabase
-      .channel(`chat:${projectId}`)
+      .channel(`chat:${projectId}:${Math.random().toString(36).slice(2,10)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `project_id=eq.${projectId}` },
