@@ -7,6 +7,7 @@ import {
   X,
   LayoutGrid,
   List,
+  GanttChartSquare,
   MapPin,
   CalendarDays,
   TrendingUp,
@@ -66,7 +67,7 @@ function ProjectsPage() {
   const [clientId, setClientId] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<"list" | "kanban" | "timeline">("list");
   const [userId, setUserId] = useState<string | undefined>();
   const role = useRole(userId);
 
@@ -240,30 +241,29 @@ function ProjectsPage() {
               </Button>
             )}
             <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-border">
-              <button
-                onClick={() => setView("grid")}
-                className={cn(
-                  "p-2 transition-colors",
-                  view === "grid"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="size-4" />
-              </button>
-              <button
-                onClick={() => setView("list")}
-                className={cn(
-                  "p-2 transition-colors",
-                  view === "list"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-                aria-label="List view"
-              >
-                <List className="size-4" />
-              </button>
+              {(
+                [
+                  { key: "list", icon: List, label: "List view" },
+                  { key: "kanban", icon: LayoutGrid, label: "Kanban view" },
+                  { key: "timeline", icon: GanttChartSquare, label: "Timeline view" },
+                ] as const
+              ).map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => setView(v.key)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium transition-colors",
+                    view === v.key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                  aria-label={v.label}
+                  aria-pressed={view === v.key}
+                >
+                  <v.icon className="size-4" />
+                  <span className="hidden sm:inline capitalize">{v.key}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -282,67 +282,321 @@ function ProjectsPage() {
             <Building2 className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">No projects match your filters.</p>
           </div>
-        ) : view === "grid" ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((r, i) => (
-              <ProjectCard key={r.id} row={r} index={i} />
-            ))}
-          </div>
+        ) : view === "kanban" ? (
+          <KanbanView rows={filtered} />
+        ) : view === "timeline" ? (
+          <TimelineView rows={filtered} />
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                <tr>
-                  <th className="px-5 py-3">Project</th>
-                  <th className="px-5 py-3">Stage</th>
-                  <th className="px-5 py-3">Progress</th>
-                  <th className="px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const stage = STAGES.find((s) => s.key === r.current_stage_key);
-                  return (
-                    <tr
-                      key={r.id}
-                      className="group border-b border-border transition-colors last:border-b-0 hover:bg-muted/30"
-                    >
-                      <td className="px-5 py-4">
-                        <Link to="/projects/$id" params={{ id: r.id }} className="block">
-                          <div className="font-display font-semibold group-hover:text-primary">
-                            {r.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {r.villa_number ? `${r.villa_number} · ` : ""}
-                            {r.address ?? "—"}
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${r.overall_progress}%` }}
-                            />
-                          </div>
-                          <span className="font-mono text-xs tabular-nums">
-                            {r.overall_progress}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusPill status={r.status} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ListView rows={filtered} />
         )}
       </div>
+    </div>
+  );
+}
+
+const KANBAN_COLUMNS: { key: string; label: string }[] = [
+  { key: "planning", label: "Planning" },
+  { key: "active", label: "Active" },
+  { key: "on_hold", label: "On Hold" },
+  { key: "handover", label: "Handover" },
+  { key: "completed", label: "Completed" },
+];
+
+function KanbanView({ rows }: { rows: Row[] }) {
+  const grouped = useMemo(() => {
+    const g: Record<string, Row[]> = {};
+    for (const col of KANBAN_COLUMNS) g[col.key] = [];
+    for (const r of rows) {
+      (g[r.status] ??= []).push(r);
+    }
+    return g;
+  }, [rows]);
+
+  return (
+    <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+      <div className="flex min-w-full gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {KANBAN_COLUMNS.map((col) => {
+          const items = grouped[col.key] ?? [];
+          return (
+            <div
+              key={col.key}
+              className="flex w-72 shrink-0 flex-col rounded-2xl border border-border bg-muted/30 p-3 sm:w-auto"
+            >
+              <div className="mb-3 flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <StatusPill status={col.key} />
+                </div>
+                <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                  {items.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {items.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-card/50 p-4 text-center text-[11px] text-muted-foreground">
+                    Empty
+                  </div>
+                ) : (
+                  items.map((r, i) => <KanbanCard key={r.id} row={r} index={i} />)
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function KanbanCard({ row, index }: { row: Row; index: number }) {
+  const stage = STAGES.find((s) => s.key === row.current_stage_key);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.03, 0.2), duration: 0.25 }}
+    >
+      <Link
+        to="/projects/$id"
+        params={{ id: row.id }}
+        className="group block rounded-xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--shadow-soft)]"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            {row.villa_number && (
+              <span className="mb-1 inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {row.villa_number}
+              </span>
+            )}
+            <h4 className="truncate font-display text-sm font-semibold group-hover:text-primary">
+              {row.name}
+            </h4>
+            {row.address && (
+              <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+                <MapPin className="size-3 shrink-0" /> {row.address}
+              </p>
+            )}
+          </div>
+          <span className="shrink-0 font-mono text-[11px] font-bold tabular-nums text-primary">
+            {row.overall_progress}%
+          </span>
+        </div>
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary"
+            style={{ width: `${row.overall_progress}%` }}
+          />
+        </div>
+        <p className="mt-2 truncate text-[11px] text-muted-foreground">
+          {stage?.short ?? "Not started"}
+        </p>
+      </Link>
+    </motion.div>
+  );
+}
+
+function ListView({ rows }: { rows: Row[] }) {
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <tr>
+            <th className="px-5 py-3">Project</th>
+            <th className="px-5 py-3">Stage</th>
+            <th className="px-5 py-3">Progress</th>
+            <th className="px-5 py-3">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const stage = STAGES.find((s) => s.key === r.current_stage_key);
+            return (
+              <tr
+                key={r.id}
+                className="group border-b border-border transition-colors last:border-b-0 hover:bg-muted/30"
+              >
+                <td className="px-5 py-4">
+                  <Link to="/projects/$id" params={{ id: r.id }} className="block">
+                    <div className="font-display font-semibold group-hover:text-primary">
+                      {r.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {r.villa_number ? `${r.villa_number} · ` : ""}
+                      {r.address ?? "—"}
+                    </div>
+                  </Link>
+                </td>
+                <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${r.overall_progress}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-xs tabular-nums">{r.overall_progress}%</span>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <StatusPill status={r.status} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TimelineView({ rows }: { rows: Row[] }) {
+  const { minTs, maxTs, months } = useMemo(() => {
+    const now = Date.now();
+    const stamps: number[] = [];
+    for (const r of rows) {
+      if (r.start_date) stamps.push(new Date(r.start_date).getTime());
+      if (r.expected_completion) stamps.push(new Date(r.expected_completion).getTime());
+    }
+    if (!stamps.length) {
+      stamps.push(now - 60 * 86400000, now + 120 * 86400000);
+    }
+    const min = new Date(Math.min(...stamps));
+    const max = new Date(Math.max(...stamps));
+    min.setDate(1);
+    max.setMonth(max.getMonth() + 1, 1);
+    const ms: { ts: number; label: string }[] = [];
+    const cur = new Date(min);
+    while (cur.getTime() < max.getTime()) {
+      ms.push({
+        ts: cur.getTime(),
+        label: cur.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
+      });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    return { minTs: min.getTime(), maxTs: max.getTime(), months: ms };
+  }, [rows]);
+
+  const span = Math.max(1, maxTs - minTs);
+  const nowPct = ((Date.now() - minTs) / span) * 100;
+  const showNow = nowPct >= 0 && nowPct <= 100;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="overflow-x-auto">
+        <div className="min-w-[760px]">
+          {/* Month header */}
+          <div className="sticky top-0 z-10 flex border-b border-border bg-muted/40">
+            <div className="w-[220px] shrink-0 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Project
+            </div>
+            <div className="flex flex-1">
+              {months.map((m, i) => (
+                <div
+                  key={i}
+                  className="flex-1 border-l border-border px-2 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
+                >
+                  {m.label}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="flex">
+            <div className="w-[220px] shrink-0">
+              {rows.map((r) => (
+                <Link
+                  key={r.id}
+                  to="/projects/$id"
+                  params={{ id: r.id }}
+                  className="block border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/20"
+                >
+                  <div className="truncate font-display text-sm font-semibold hover:text-primary">
+                    {r.name}
+                  </div>
+                  <div className="truncate text-[11px] text-muted-foreground">
+                    {r.villa_number ? `${r.villa_number} · ` : ""}
+                    {r.address ?? "—"}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="relative flex-1">
+              {showNow && (
+                <div
+                  className="pointer-events-none absolute top-0 bottom-0 w-px bg-accent/80"
+                  style={{ left: `${nowPct}%` }}
+                  aria-hidden
+                >
+                  <span className="absolute -top-0.5 -translate-x-1/2 rounded-sm bg-accent px-1 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-accent-foreground">
+                    Now
+                  </span>
+                </div>
+              )}
+              {rows.map((r) => (
+                <TimelineBar key={r.id} row={r} minTs={minTs} span={span} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineBar({
+  row,
+  minTs,
+  span,
+}: {
+  row: Row;
+  minTs: number;
+  span: number;
+}) {
+  const startTs = row.start_date ? new Date(row.start_date).getTime() : null;
+  const endTs = row.expected_completion ? new Date(row.expected_completion).getTime() : null;
+  const has = startTs !== null && endTs !== null && endTs > startTs;
+  const leftPct = has ? Math.max(0, ((startTs! - minTs) / span) * 100) : 0;
+  const widthPct = has ? Math.max(2, ((endTs! - startTs!) / span) * 100) : 0;
+
+  const now = Date.now();
+  const late = endTs !== null && now > endTs && row.status !== "completed";
+  const barTone =
+    row.status === "completed"
+      ? "bg-emerald-500"
+      : late
+        ? "bg-destructive"
+        : row.status === "on_hold"
+          ? "bg-amber-500"
+          : "bg-primary";
+
+  return (
+    <div className="relative h-[62px] border-b border-border last:border-b-0">
+      {has ? (
+        <Link
+          to="/projects/$id"
+          params={{ id: row.id }}
+          className={cn(
+            "group absolute top-1/2 -translate-y-1/2 flex h-7 items-center overflow-hidden rounded-md text-[11px] font-medium text-primary-foreground shadow-sm transition-all hover:h-8",
+            barTone,
+          )}
+          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+          title={`${new Date(startTs!).toLocaleDateString()} → ${new Date(endTs!).toLocaleDateString()}`}
+        >
+          <div
+            className="h-full bg-black/20"
+            style={{ width: `${row.overall_progress}%` }}
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-2">
+            <span className="truncate">{row.overall_progress}%</span>
+            {late && <AlertTriangle className="size-3 shrink-0" />}
+          </span>
+        </Link>
+      ) : (
+        <div className="absolute inset-y-0 left-3 flex items-center text-[11px] text-muted-foreground">
+          No dates set
+        </div>
+      )}
     </div>
   );
 }
