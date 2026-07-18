@@ -601,7 +601,7 @@ function TimelineRow({
   );
 }
 
-
+function MiniStat({
   icon: Icon,
   label,
   value,
