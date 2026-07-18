@@ -7,6 +7,7 @@ import {
   X,
   LayoutGrid,
   List,
+  GanttChartSquare,
   MapPin,
   CalendarDays,
   TrendingUp,
