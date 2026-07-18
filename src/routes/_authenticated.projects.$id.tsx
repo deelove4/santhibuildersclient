@@ -22,6 +22,8 @@ import { StageManager, type Stage } from "@/components/projects/StageManager";
 import { MediaGallery } from "@/components/projects/MediaGallery";
 import { DocumentsList } from "@/components/projects/DocumentsList";
 import { ChatBox } from "@/components/projects/ChatBox";
+import { IssueTracker } from "@/components/projects/IssueTracker";
+import { BudgetTracker } from "@/components/projects/BudgetTracker";
 import {
   ProjectDetailsEditor,
   type EditableProject,
@@ -259,6 +261,8 @@ function ProjectDetailPage() {
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="issues">Issues</TabsTrigger>
+          <TabsTrigger value="budget">Budget</TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
 
@@ -283,6 +287,24 @@ function ProjectDetailPage() {
 
         <TabsContent value="documents" className="mt-6">
           <DocumentsList projectId={project.id} isAdmin={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="issues" className="mt-6">
+          {userId ? (
+            <IssueTracker
+              projectId={project.id}
+              isAdmin={isAdmin}
+              currentUserId={userId}
+            />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              Loading…
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="budget" className="mt-6">
+          <BudgetTracker projectId={project.id} isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="chat" className="mt-6">
