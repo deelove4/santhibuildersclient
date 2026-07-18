@@ -20,6 +20,7 @@ interface Media {
   mime_type: string | null;
   media_type: string;
   caption: string | null;
+  external_url: string | null;
   created_at: string;
 }
 
@@ -174,14 +175,14 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
                 className="group relative overflow-hidden rounded-xl border border-border bg-card"
               >
                 <div className="aspect-square bg-muted">
-                  {url ? (
+                  {url || m.external_url ? (
                     isVideo ? (
                       <div className="flex h-full items-center justify-center">
                         <Film className="size-8 text-muted-foreground" />
                       </div>
                     ) : (
                       <img
-                        src={url}
+                        src={url || m.external_url!}
                         alt={m.caption ?? m.file_name}
                         className="h-full w-full object-cover"
                         loading="lazy"
@@ -191,19 +192,24 @@ export function MediaGallery({ projectId, isAdmin }: { projectId: string; isAdmi
                     <div className="h-full animate-pulse" />
                   )}
                 </div>
-                <div className="flex items-center justify-between px-3 py-2">
-                  <span className="truncate font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    {m.media_type}
-                  </span>
-                  {url && (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Open
-                    </a>
+                <div className="px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="truncate font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {m.media_type}
+                    </span>
+                    {(url || m.external_url) && (
+                      <a
+                        href={url || m.external_url!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Open
+                      </a>
+                    )}
+                  </div>
+                  {m.caption && (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{m.caption}</p>
                   )}
                 </div>
                 {isAdmin && (

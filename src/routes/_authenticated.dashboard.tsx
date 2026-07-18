@@ -11,6 +11,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { cn } from "@/lib/utils";
+import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
+import { NewClientDialog } from "@/components/NewClientDialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -32,25 +34,27 @@ function DashboardPage() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  async function loadData(cancelled?: { value: boolean }) {
+    const [{ data: roles }, { data: proj }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", user.id),
+      supabase
+        .from("projects")
+        .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(12),
+    ]);
+    if (cancelled?.value) return;
+    const rs = (roles ?? []).map((r) => r.role);
+    setRole(rs.includes("admin") ? "admin" : "client");
+    setProjects((proj ?? []) as ProjectRow[]);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [{ data: roles }, { data: proj }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-        supabase
-          .from("projects")
-          .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
-          .order("updated_at", { ascending: false })
-          .limit(12),
-      ]);
-      if (cancelled) return;
-      const rs = (roles ?? []).map((r) => r.role);
-      setRole(rs.includes("admin") ? "admin" : "client");
-      setProjects((proj ?? []) as ProjectRow[]);
-      setLoading(false);
-    })();
+    const flag = { value: false };
+    loadData(flag);
     return () => {
-      cancelled = true;
+      flag.value = true;
     };
   }, [user.id]);
 
@@ -79,6 +83,12 @@ function DashboardPage() {
             {role === "admin" ? "Portfolio dashboard" : "Project dashboard"}
           </h1>
         </div>
+        {role === "admin" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <NewClientDialog onCreated={() => loadData()} />
+            <NewProjectDialog onCreated={() => loadData()} />
+          </div>
+        )}
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -117,7 +127,7 @@ function DashboardPage() {
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <EmptyProjects role={role} />
+          <EmptyProjects role={role} onCreated={() => loadData()} />
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {projects.slice(0, 6).map((p) => (
@@ -187,7 +197,13 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function EmptyProjects({ role }: { role: "admin" | "client" | null }) {
+function EmptyProjects({
+  role,
+  onCreated,
+}: {
+  role: "admin" | "client" | null;
+  onCreated: () => void;
+}) {
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card/50 p-12 text-center">
       <Building2 className="mx-auto size-8 text-muted-foreground" />
@@ -197,6 +213,12 @@ function EmptyProjects({ role }: { role: "admin" | "client" | null }) {
           ? "Create your first project and assign a client to get started."
           : "Your project will appear here as soon as your Santhi Builders team sets it up."}
       </p>
+      {role === "admin" && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <NewClientDialog onCreated={onCreated} />
+          <NewProjectDialog onCreated={onCreated} />
+        </div>
+      )}
     </div>
   );
 }
