@@ -62,7 +62,7 @@ export function DocumentsList({ projectId, isAdmin }: { projectId: string; isAdm
   useEffect(() => {
     load();
     const channel = supabase
-      .channel(`docs:${projectId}:${Math.random().toString(36).slice(2,10)}`)
+      .channel(`docs:${projectId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "project_documents", filter: `project_id=eq.${projectId}` },

@@ -34,9 +34,8 @@ export function NotificationsBell({ userId }: { userId: string }) {
 
   useEffect(() => {
     load();
-    const topic = `notifs:${userId}:${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(topic)
+      .channel(`notifs:${userId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
@@ -50,7 +49,6 @@ export function NotificationsBell({ userId }: { userId: string }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
-
 
   const unread = items.filter((i) => !i.read_at).length;
 

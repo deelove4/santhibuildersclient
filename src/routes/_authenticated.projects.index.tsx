@@ -71,7 +71,7 @@ function ProjectsPage() {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel(`projects-list:${Math.random().toString(36).slice(2,10)}`)
+      .channel("projects-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, load)
       .subscribe();
     return () => {
