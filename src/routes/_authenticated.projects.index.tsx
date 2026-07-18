@@ -241,30 +241,29 @@ function ProjectsPage() {
               </Button>
             )}
             <div className="ml-auto inline-flex overflow-hidden rounded-lg border border-border">
-              <button
-                onClick={() => setView("grid")}
-                className={cn(
-                  "p-2 transition-colors",
-                  view === "grid"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="size-4" />
-              </button>
-              <button
-                onClick={() => setView("list")}
-                className={cn(
-                  "p-2 transition-colors",
-                  view === "list"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-                aria-label="List view"
-              >
-                <List className="size-4" />
-              </button>
+              {(
+                [
+                  { key: "list", icon: List, label: "List view" },
+                  { key: "kanban", icon: LayoutGrid, label: "Kanban view" },
+                  { key: "timeline", icon: GanttChartSquare, label: "Timeline view" },
+                ] as const
+              ).map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => setView(v.key)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium transition-colors",
+                    view === v.key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                  aria-label={v.label}
+                  aria-pressed={view === v.key}
+                >
+                  <v.icon className="size-4" />
+                  <span className="hidden sm:inline capitalize">{v.key}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
