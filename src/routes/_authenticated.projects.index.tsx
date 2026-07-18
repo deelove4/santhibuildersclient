@@ -67,7 +67,7 @@ function ProjectsPage() {
   const [clientId, setClientId] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<"list" | "kanban" | "timeline">("list");
   const [userId, setUserId] = useState<string | undefined>();
   const role = useRole(userId);
 
