@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -7,10 +7,15 @@ import {
   TrendingUp,
   Users,
   ArrowUpRight,
+  FolderKanban,
+  MessageSquare,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
+import { NewClientDialog } from "@/components/clients/NewClientDialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -32,27 +37,25 @@ function DashboardPage() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [{ data: roles }, { data: proj }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-        supabase
-          .from("projects")
-          .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
-          .order("updated_at", { ascending: false })
-          .limit(12),
-      ]);
-      if (cancelled) return;
-      const rs = (roles ?? []).map((r) => r.role);
-      setRole(rs.includes("admin") ? "admin" : "client");
-      setProjects((proj ?? []) as ProjectRow[]);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const refreshDashboard = useCallback(async () => {
+    setLoading(true);
+    const [{ data: roles }, { data: proj }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", user.id),
+      supabase
+        .from("projects")
+        .select("id, name, address, status, overall_progress, current_stage_key, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(12),
+    ]);
+    const rs = (roles ?? []).map((r) => r.role);
+    setRole(rs.includes("admin") ? "admin" : "client");
+    setProjects((proj ?? []) as ProjectRow[]);
+    setLoading(false);
   }, [user.id]);
+
+  useEffect(() => {
+    refreshDashboard();
+  }, [refreshDashboard]);
 
   const total = projects.length;
   const active = projects.filter((p) => p.status === "active").length;
@@ -79,7 +82,36 @@ function DashboardPage() {
             {role === "admin" ? "Portfolio dashboard" : "Project dashboard"}
           </h1>
         </div>
+        {role === "admin" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <NewClientDialog onCreated={() => undefined} />
+            <NewProjectDialog onCreated={refreshDashboard} />
+          </div>
+        )}
       </header>
+
+      {role === "admin" && (
+        <section className="mb-6 grid gap-3 lg:grid-cols-3">
+          <AdminAction
+            icon={Users}
+            label="Client portals"
+            body="Create and manage client login access."
+            to="/clients"
+          />
+          <AdminAction
+            icon={FolderKanban}
+            label="Project editor"
+            body="Open projects to edit details, stages, uploads, and documents."
+            to="/projects"
+          />
+          <AdminAction
+            icon={MessageSquare}
+            label="Project chat"
+            body="Use each project page for live client conversations."
+            to="/projects"
+          />
+        </section>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k, i) => (
@@ -126,6 +158,35 @@ function DashboardPage() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function AdminAction({
+  icon: Icon,
+  label,
+  body,
+  to,
+}: {
+  icon: typeof Users;
+  label: string;
+  body: string;
+  to: "/clients" | "/projects";
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-start gap-3">
+        <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-base font-semibold">{label}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+          <Button asChild variant="outline" size="sm" className="mt-4">
+            <Link to={to}>Open module</Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

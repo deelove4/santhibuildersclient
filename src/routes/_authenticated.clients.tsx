@@ -1,22 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
-import { z } from "zod";
-import { Users, UserPlus } from "lucide-react";
+import { Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { createClientAccount } from "@/lib/admin.functions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { NewClientDialog } from "@/components/clients/NewClientDialog";
 
 export const Route = createFileRoute("/_authenticated/clients")({
   beforeLoad: async () => {
@@ -43,7 +29,6 @@ interface ClientRow {
 function ClientsPage() {
   const [rows, setRows] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
 
   async function refresh() {
     const { data: roleRows } = await supabase
@@ -78,19 +63,7 @@ function ClientsPage() {
           </p>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Clients</h1>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 size-4" /> Add client
-            </Button>
-          </DialogTrigger>
-          <NewClientDialog
-            onCreated={() => {
-              setOpen(false);
-              refresh();
-            }}
-          />
-        </Dialog>
+        <NewClientDialog onCreated={refresh} />
       </header>
 
       {loading ? (
@@ -133,92 +106,5 @@ function ClientsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-const clientSchema = z.object({
-  email: z.string().trim().email(),
-  full_name: z.string().trim().min(1).max(120),
-  phone: z.string().trim().max(40).optional(),
-  password: z.string().min(10, "At least 10 characters").max(128),
-});
-
-function NewClientDialog({ onCreated }: { onCreated: () => void }) {
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const createFn = useServerFn(createClientAccount);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const parsed = clientSchema.safeParse({ email, full_name: fullName, phone: phone || undefined, password });
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
-      return;
-    }
-    setBusy(true);
-    try {
-      await createFn({
-        data: {
-          email: parsed.data.email,
-          full_name: parsed.data.full_name,
-          phone: parsed.data.phone ?? null,
-          password: parsed.data.password,
-        },
-      });
-      toast.success("Client created");
-      setEmail("");
-      setFullName("");
-      setPhone("");
-      setPassword("");
-      onCreated();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create client");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Add a new client</DialogTitle>
-      </DialogHeader>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Full name</Label>
-          <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="e">Email</Label>
-          <Input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ph">Phone (optional)</Label>
-          <Input id="ph" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="pw">Temporary password</Label>
-          <Input
-            id="pw"
-            type="text"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="min. 10 characters"
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Share this with the client securely. They can change it after signing in.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button type="submit" disabled={busy}>
-            {busy ? "Creating…" : "Create client"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
   );
 }

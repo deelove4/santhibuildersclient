@@ -14,12 +14,14 @@ export const createClientAccount = createServerFn({ method: "POST" })
   .inputValidator((raw) => CreateClientInput.parse(raw))
   .handler(async ({ data, context }) => {
     // Verify caller is admin using their own RLS-scoped client
-    const { data: isAdmin, error: rerr } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
+    const { data: adminRole, error: rerr } = await context.supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("role", "admin")
+      .maybeSingle();
     if (rerr) throw new Error("Role check failed");
-    if (!isAdmin) throw new Error("Forbidden");
+    if (!adminRole) throw new Error("Forbidden");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
