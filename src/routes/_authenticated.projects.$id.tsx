@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StageManager, type Stage } from "@/components/projects/StageManager";
 import { MediaGallery } from "@/components/projects/MediaGallery";
 import { DocumentsList } from "@/components/projects/DocumentsList";
+import { ProjectChat } from "@/components/projects/ProjectChat";
 import {
   ProjectDetailsEditor,
   type EditableProject,
@@ -122,6 +123,7 @@ function ProjectDetailPage() {
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
 
         <TabsContent value="timeline" className="mt-6">
@@ -145,6 +147,10 @@ function ProjectDetailPage() {
 
         <TabsContent value="documents" className="mt-6">
           <DocumentsList projectId={project.id} isAdmin={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-6">
+          <ProjectChat projectId={project.id} currentUserId={userId} />
         </TabsContent>
       </Tabs>
     </div>
