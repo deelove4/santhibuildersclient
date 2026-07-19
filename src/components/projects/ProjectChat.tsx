@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface MessageRow {
@@ -125,7 +124,7 @@ export function ProjectChat({ projectId, currentUserId }: ProjectChatProps) {
         </p>
       </div>
 
-      <ScrollArea className="h-[430px]" viewportRef={viewportRef}>
+      <div ref={viewportRef} className="h-[430px] overflow-y-auto">
         <div className="space-y-4 p-5">
           {loading ? (
             Array.from({ length: 4 }).map((_, i) => (
@@ -160,7 +159,7 @@ export function ProjectChat({ projectId, currentUserId }: ProjectChatProps) {
             })
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <form onSubmit={sendMessage} className="border-t border-border p-4">
         <div className="flex gap-2">
