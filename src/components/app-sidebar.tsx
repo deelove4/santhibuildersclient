@@ -1,4 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Logo } from "@/components/brand/Logo";
 import {
   LayoutDashboard,
   Building2,
@@ -43,17 +44,13 @@ export function AppSidebar({ role, email, fullName }: Props) {
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="grid size-8 place-items-center rounded-lg bg-primary font-display font-bold text-primary-foreground">
-          S
-        </div>
-        <div className="min-w-0">
-          <div className="font-display text-sm font-semibold leading-tight">Santhi Builders</div>
-          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            {role === "admin" ? "Admin Console" : "Client Portal"}
-          </div>
+      <div className="flex items-center gap-2.5 border-b border-sidebar-border/60 px-4 py-4">
+        <Logo className="h-9" />
+        <div className="ml-auto font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+          {role === "admin" ? "Admin" : "Client"}
         </div>
       </div>
+
 
       <nav className="flex-1 space-y-0.5 px-3">
         {items.map((it) => {
