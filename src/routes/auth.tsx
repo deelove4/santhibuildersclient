@@ -52,10 +52,11 @@ function AuthPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(254,147,44,0.35),transparent_55%)]" />
         <div className="relative flex h-full flex-col justify-between p-12 text-primary-foreground">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-lg bg-white/15 font-display font-bold backdrop-blur">
-              S
-            </div>
-            <span className="font-display text-lg font-semibold">Santhi Builders</span>
+            <img
+              src="/__l5e/assets-v1/de21a3df-d882-4f70-a06a-a307a56c40af/santhi-logo.png"
+              alt="Santhi Builders"
+              className="h-10 w-auto rounded-md bg-white/95 p-1.5 shadow-sm"
+            />
           </Link>
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-white/60">
@@ -82,10 +83,11 @@ function AuthPage() {
         >
           <div>
             <Link to="/" className="mb-8 inline-flex items-center gap-2 md:hidden">
-              <div className="grid size-8 place-items-center rounded-lg bg-primary font-display font-bold text-primary-foreground">
-                S
-              </div>
-              <span className="font-display font-semibold">Santhi Builders</span>
+              <img
+                src="/__l5e/assets-v1/de21a3df-d882-4f70-a06a-a307a56c40af/santhi-logo.png"
+                alt="Santhi Builders"
+                className="h-8 w-auto"
+              />
             </Link>
             <h1 className="font-display text-3xl font-bold tracking-tight">Welcome back</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">

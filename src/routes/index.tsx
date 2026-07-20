@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Building2, ShieldCheck, LineChart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/Logo";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -20,12 +21,8 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2.5">
-          <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
-            S
-          </div>
-          <span className="font-display text-lg font-semibold tracking-tight">Santhi Builders</span>
-        </div>
+        <Logo className="h-9" />
+
         <Button asChild size="sm">
           <Link to="/auth">Sign in</Link>
         </Button>
