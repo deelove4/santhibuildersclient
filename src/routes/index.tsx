@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Building2, ShieldCheck, LineChart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/Logo";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
