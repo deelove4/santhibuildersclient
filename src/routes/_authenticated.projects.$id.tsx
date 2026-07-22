@@ -128,14 +128,13 @@ function ProjectDetailPage() {
             {/* Stage stepper */}
             <div className="mt-5 -mx-1 overflow-x-auto pb-1">
               <ol className="flex min-w-max items-center gap-1 px-1">
-                {STAGES.map((def, i) => {
-                  const st = stages.find((s) => s.stage_key === def.key);
-                  const done = st?.status === "completed";
-                  const active = st?.status === "in_progress" || i === currentIndex;
+                {stages.map((st, i) => {
+                  const done = st.status === "completed";
+                  const active = st.status === "in_progress" || st.stage_key === project.current_stage_key;
                   return (
-                    <li key={def.key} className="flex items-center">
+                    <li key={st.id} className="flex items-center">
                       <div
-                        title={def.name}
+                        title={st.stage_name}
                         className={cn(
                           "grid size-8 shrink-0 place-items-center rounded-full font-mono text-[11px] font-semibold transition-all",
                           done
@@ -147,7 +146,7 @@ function ProjectDetailPage() {
                       >
                         {done ? <Check className="size-4" /> : i + 1}
                       </div>
-                      {i < STAGES.length - 1 && (
+                      {i < stages.length - 1 && (
                         <div
                           className={cn(
                             "h-px w-4 sm:w-6",
