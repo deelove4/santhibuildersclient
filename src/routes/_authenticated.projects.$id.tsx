@@ -175,7 +175,7 @@ function ProjectDetailPage() {
                 Overall
               </div>
               <div className="mt-0.5 font-display text-sm font-semibold">
-                {completedCount} / {STAGES.length} stages done
+                {completedCount} / {totalStages} stages done
               </div>
               <div className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Time elapsed
