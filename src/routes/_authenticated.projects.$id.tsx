@@ -12,7 +12,7 @@ import {
   ProjectDetailsEditor,
   type EditableProject,
 } from "@/components/projects/ProjectDetailsEditor";
-import { STAGES } from "@/lib/stages";
+
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
