@@ -225,7 +225,7 @@ function ProjectDetailPage() {
               Construction timeline
             </h2>
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              {completedCount} of {STAGES.length} complete
+              {completedCount} of {totalStages} complete
             </span>
           </div>
           <StageManager
