@@ -12,7 +12,7 @@ import {
   ProjectDetailsEditor,
   type EditableProject,
 } from "@/components/projects/ProjectDetailsEditor";
-import { STAGES } from "@/lib/stages";
+
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
@@ -76,7 +76,7 @@ function ProjectDetailPage() {
   }
 
   const completedCount = stages.filter((s) => s.status === "completed").length;
-  const currentIndex = STAGES.findIndex((s) => s.key === project.current_stage_key);
+  const totalStages = stages.length;
   const timeElapsed = calcTimeElapsed(project.start_date, project.expected_completion);
   const daysRemaining = calcDaysRemaining(project.expected_completion);
   const statusLabel = statusMeta(project.status);
@@ -128,14 +128,13 @@ function ProjectDetailPage() {
             {/* Stage stepper */}
             <div className="mt-5 -mx-1 overflow-x-auto pb-1">
               <ol className="flex min-w-max items-center gap-1 px-1">
-                {STAGES.map((def, i) => {
-                  const st = stages.find((s) => s.stage_key === def.key);
-                  const done = st?.status === "completed";
-                  const active = st?.status === "in_progress" || i === currentIndex;
+                {stages.map((st, i) => {
+                  const done = st.status === "completed";
+                  const active = st.status === "in_progress" || st.stage_key === project.current_stage_key;
                   return (
-                    <li key={def.key} className="flex items-center">
+                    <li key={st.id} className="flex items-center">
                       <div
-                        title={def.name}
+                        title={st.stage_name}
                         className={cn(
                           "grid size-8 shrink-0 place-items-center rounded-full font-mono text-[11px] font-semibold transition-all",
                           done
@@ -147,7 +146,7 @@ function ProjectDetailPage() {
                       >
                         {done ? <Check className="size-4" /> : i + 1}
                       </div>
-                      {i < STAGES.length - 1 && (
+                      {i < stages.length - 1 && (
                         <div
                           className={cn(
                             "h-px w-4 sm:w-6",
@@ -176,7 +175,7 @@ function ProjectDetailPage() {
                 Overall
               </div>
               <div className="mt-0.5 font-display text-sm font-semibold">
-                {completedCount} / {STAGES.length} stages done
+                {completedCount} / {totalStages} stages done
               </div>
               <div className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Time elapsed
@@ -226,7 +225,7 @@ function ProjectDetailPage() {
               Construction timeline
             </h2>
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              {completedCount} of {STAGES.length} complete
+              {completedCount} of {totalStages} complete
             </span>
           </div>
           <StageManager

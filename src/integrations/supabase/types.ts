@@ -345,6 +345,8 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          phase_name: string | null
+          phase_order: number
           progress: number
           project_id: string
           stage_key: string
@@ -360,6 +362,8 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          phase_name?: string | null
+          phase_order?: number
           progress?: number
           project_id: string
           stage_key: string
@@ -375,6 +379,8 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          phase_name?: string | null
+          phase_order?: number
           progress?: number
           project_id?: string
           stage_key?: string
@@ -524,6 +530,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stage_template_items: {
+        Row: {
+          created_at: string
+          id: string
+          phase_name: string
+          phase_order: number
+          stage_key: string
+          stage_name: string
+          stage_order: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phase_name: string
+          phase_order: number
+          stage_key: string
+          stage_name: string
+          stage_order: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phase_name?: string
+          phase_order?: number
+          stage_key?: string
+          stage_name?: string
+          stage_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "stage_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

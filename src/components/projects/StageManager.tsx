@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Clock, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { STAGES } from "@/lib/stages";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -24,6 +22,8 @@ export interface Stage {
   status: string;
   progress: number;
   notes: string | null;
+  phase_name?: string | null;
+  phase_order?: number | null;
 }
 
 interface Props {
@@ -34,32 +34,51 @@ interface Props {
 }
 
 export function StageManager({ projectId, stages, isAdmin, onChanged }: Props) {
-  const ordered = STAGES.map(
-    (def) =>
-      stages.find((s) => s.stage_key === def.key) ?? {
-        id: def.key,
-        stage_key: def.key,
-        stage_name: def.name,
-        stage_order: 0,
-        status: "pending",
-        progress: 0,
-        notes: null,
-      },
-  );
+  const phases = useMemo(() => {
+    const map = new Map<string, { name: string; order: number; items: Stage[] }>();
+    for (const s of stages) {
+      const pname = s.phase_name || "Timeline";
+      const porder = s.phase_order ?? 1;
+      const key = `${porder}::${pname}`;
+      if (!map.has(key)) map.set(key, { name: pname, order: porder, items: [] });
+      map.get(key)!.items.push(s);
+    }
+    return Array.from(map.values()).sort((a, b) => a.order - b.order);
+  }, [stages]);
 
+  let counter = 0;
   return (
-    <ol className="space-y-2">
-      {ordered.map((s, i) => (
-        <StageRow
-          key={s.stage_key}
-          stage={s}
-          index={i}
-          isAdmin={isAdmin}
-          projectId={projectId}
-          onChanged={onChanged}
-        />
+    <div className="space-y-6">
+      {phases.map((ph) => (
+        <div key={`${ph.order}-${ph.name}`}>
+          <div className="mb-3 flex items-baseline gap-2">
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-primary">
+              Phase {ph.order}
+            </span>
+            <h3 className="font-display text-lg font-semibold">{ph.name}</h3>
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {ph.items.filter((s) => s.status === "completed").length} / {ph.items.length} done
+            </span>
+          </div>
+          <ol className="space-y-2">
+            {ph.items.map((s) => {
+              const idx = counter++;
+              return (
+                <StageRow
+                  key={s.id}
+                  stage={s}
+                  index={idx}
+                  isAdmin={isAdmin}
+                  projectId={projectId}
+                  totalStages={stages.length}
+                  onChanged={onChanged}
+                />
+              );
+            })}
+          </ol>
+        </div>
       ))}
-    </ol>
+    </div>
   );
 }
 
@@ -68,17 +87,18 @@ function StageRow({
   index,
   isAdmin,
   projectId,
+  totalStages,
   onChanged,
 }: {
   stage: Stage;
   index: number;
   isAdmin: boolean;
   projectId: string;
+  totalStages: number;
   onChanged: () => void;
 }) {
   const [edit, setEdit] = useState(false);
   const [status, setStatus] = useState(stage.status);
-  const [progress, setProgress] = useState(stage.progress);
   const [notes, setNotes] = useState(stage.notes ?? "");
   const [busy, setBusy] = useState(false);
 
@@ -87,41 +107,35 @@ function StageRow({
 
   async function save() {
     setBusy(true);
-    const payload = {
-      project_id: projectId,
-      stage_key: stage.stage_key,
-      stage_name: stage.stage_name,
-      stage_order: STAGES.findIndex((x) => x.key === stage.stage_key) + 1,
-      status: status as "pending" | "in_progress" | "completed",
-      progress: Math.max(0, Math.min(100, progress)),
-      notes: notes.trim() || null,
-      started_at: status !== "pending" ? new Date().toISOString() : null,
-      completed_at: status === "completed" ? new Date().toISOString() : null,
-    };
+    const progress = status === "completed" ? 100 : status === "in_progress" ? 50 : 0;
     const { error } = await supabase
       .from("project_stages")
-      .upsert(payload, { onConflict: "project_id,stage_key" });
+      .update({
+        status: status as "pending" | "in_progress" | "completed",
+        progress,
+        notes: notes.trim() || null,
+        started_at: status !== "pending" ? new Date().toISOString() : null,
+        completed_at: status === "completed" ? new Date().toISOString() : null,
+      })
+      .eq("id", stage.id);
     if (error) {
       toast.error(error.message);
       setBusy(false);
       return;
     }
-    // Update project current stage + overall progress
+    // Recalc overall progress + current stage
     const { data: all } = await supabase
       .from("project_stages")
       .select("progress, status, stage_order, stage_key")
-      .eq("project_id", projectId);
+      .eq("project_id", projectId)
+      .order("stage_order");
     const rows = all ?? [];
     const overall = rows.length
-      ? Math.round(rows.reduce((s, r) => s + (r.progress ?? 0), 0) / STAGES.length)
+      ? Math.round(rows.reduce((s, r) => s + (r.progress ?? 0), 0) / rows.length)
       : 0;
     const currentStage =
-      rows
-        .filter((r) => r.status === "in_progress")
-        .sort((a, b) => a.stage_order - b.stage_order)[0]?.stage_key ??
-      rows
-        .filter((r) => r.status !== "completed")
-        .sort((a, b) => a.stage_order - b.stage_order)[0]?.stage_key ??
+      rows.find((r) => r.status === "in_progress")?.stage_key ??
+      rows.find((r) => r.status !== "completed")?.stage_key ??
       stage.stage_key;
     await supabase
       .from("projects")
@@ -137,13 +151,13 @@ function StageRow({
     <motion.li
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.02, duration: 0.25 }}
+      transition={{ delay: Math.min(index, 20) * 0.02, duration: 0.25 }}
       className={cn(
-        "rounded-xl border border-border bg-card px-5 py-4 transition-colors",
+        "rounded-xl border border-border bg-card px-4 py-3 transition-colors sm:px-5 sm:py-4",
         active && "border-primary/40 bg-primary/[0.03]",
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <div
           className={cn(
             "grid size-8 shrink-0 place-items-center rounded-full font-mono text-xs font-semibold",
@@ -157,38 +171,34 @@ function StageRow({
           {done ? <Check className="size-4" /> : active ? <Clock className="size-4" /> : index + 1}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-display font-semibold">{stage.stage_name}</span>
-            {active && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-primary">
-                In progress
-              </span>
-            )}
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest",
+                done
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                  : active
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground",
+              )}
+            >
+              {done ? "Completed" : active ? "In progress" : "Pending"}
+            </span>
           </div>
           {!edit && stage.notes && (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{stage.notes}</p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{stage.notes}</p>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn("h-full rounded-full", done ? "bg-primary" : "bg-primary/70")}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span className="w-10 text-right font-mono text-xs tabular-nums text-muted-foreground">
-            {progress}%
-          </span>
-          {isAdmin && (
-            <Button size="sm" variant="ghost" onClick={() => setEdit((v) => !v)}>
-              {edit ? "Cancel" : "Edit"}
-            </Button>
-          )}
-        </div>
+        {isAdmin && (
+          <Button size="sm" variant="ghost" onClick={() => setEdit((v) => !v)}>
+            {edit ? "Cancel" : "Edit"}
+          </Button>
+        )}
       </div>
 
       {edit && isAdmin && (
-        <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-[160px_120px_1fr_auto]">
+        <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-[180px_1fr_auto]">
           <div>
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
               Status
@@ -203,19 +213,6 @@ function StageRow({
                 <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Progress
-            </label>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={progress}
-              onChange={(e) => setProgress(Number(e.target.value))}
-              className="mt-1"
-            />
           </div>
           <div>
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -235,6 +232,7 @@ function StageRow({
           </div>
         </div>
       )}
+      <span className="sr-only">{totalStages}</span>
     </motion.li>
   );
 }
