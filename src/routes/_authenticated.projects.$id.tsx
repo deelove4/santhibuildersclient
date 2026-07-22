@@ -76,7 +76,7 @@ function ProjectDetailPage() {
   }
 
   const completedCount = stages.filter((s) => s.status === "completed").length;
-  const currentIndex = STAGES.findIndex((s) => s.key === project.current_stage_key);
+  const totalStages = stages.length;
   const timeElapsed = calcTimeElapsed(project.start_date, project.expected_completion);
   const daysRemaining = calcDaysRemaining(project.expected_completion);
   const statusLabel = statusMeta(project.status);
