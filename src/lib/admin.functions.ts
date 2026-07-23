@@ -9,20 +9,22 @@ const CreateClientInput = z.object({
   password: z.string().min(10).max(128),
 });
 
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const { data: adminRole, error } = await context.supabase
+    .from("user_roles")
+    .select("id")
+    .eq("user_id", context.userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (error) throw new Error("Role check failed");
+  if (!adminRole) throw new Error("Forbidden");
+}
+
 export const createClientAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw) => CreateClientInput.parse(raw))
   .handler(async ({ data, context }) => {
-    // Verify caller is admin using their own RLS-scoped client
-    const { data: adminRole, error: rerr } = await context.supabase
-      .from("user_roles")
-      .select("id")
-      .eq("user_id", context.userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    if (rerr) throw new Error("Role check failed");
-    if (!adminRole) throw new Error("Forbidden");
-
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
@@ -33,16 +35,30 @@ export const createClientAccount = createServerFn({ method: "POST" })
     });
     if (error || !created.user) throw new Error(error?.message ?? "Failed to create user");
 
-    // Ensure profile fields
     await supabaseAdmin
       .from("profiles")
       .update({ full_name: data.full_name, phone: data.phone ?? null })
       .eq("id", created.user.id);
 
-    // Ensure client role
     await supabaseAdmin
       .from("user_roles")
       .upsert({ user_id: created.user.id, role: "client" }, { onConflict: "user_id,role" });
 
     return { user_id: created.user.id, email: created.user.email };
+  });
+
+const DeleteClientInput = z.object({ user_id: z.string().uuid() });
+
+export const deleteClientAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw) => DeleteClientInput.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    if (data.user_id === context.userId) throw new Error("Cannot delete yourself");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Detach client from any projects first
+    await supabaseAdmin.from("projects").update({ client_id: null }).eq("client_id", data.user_id);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

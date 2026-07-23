@@ -138,6 +138,7 @@ export type Database = {
           project_id: string
           read_at: string | null
           sender_id: string
+          stage_key: string | null
         }
         Insert: {
           body: string
@@ -146,6 +147,7 @@ export type Database = {
           project_id: string
           read_at?: string | null
           sender_id: string
+          stage_key?: string | null
         }
         Update: {
           body?: string
@@ -154,6 +156,7 @@ export type Database = {
           project_id?: string
           read_at?: string | null
           sender_id?: string
+          stage_key?: string | null
         }
         Relationships: [
           {
@@ -344,6 +347,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
+          image_urls: string[]
           notes: string | null
           phase_name: string | null
           phase_order: number
@@ -361,6 +365,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          image_urls?: string[]
           notes?: string | null
           phase_name?: string | null
           phase_order?: number
@@ -378,6 +383,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          image_urls?: string[]
           notes?: string | null
           phase_name?: string | null
           phase_order?: number

@@ -8,7 +8,6 @@ import {
   LogOut,
   Sun,
   Moon,
-  ChevronsUpDown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,9 +20,10 @@ interface Props {
   role: AppRole | null;
   email: string | null;
   fullName: string | null;
+  onNavigate?: () => void;
 }
 
-export function AppSidebar({ role, email, fullName }: Props) {
+export function AppSidebar({ role, email, fullName, onNavigate }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
@@ -43,7 +43,7 @@ export function AppSidebar({ role, email, fullName }: Props) {
   }
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full w-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:h-screen md:w-64 md:shrink-0">
       <div className="flex items-center gap-2.5 border-b border-sidebar-border/60 px-4 py-4">
         <Logo className="h-9" />
         <div className="ml-auto font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
@@ -51,14 +51,14 @@ export function AppSidebar({ role, email, fullName }: Props) {
         </div>
       </div>
 
-
-      <nav className="flex-1 space-y-0.5 px-3">
+      <nav className="flex-1 space-y-0.5 px-3 py-2">
         {items.map((it) => {
           const active = pathname === it.to || pathname.startsWith(it.to + "/");
           return (
             <Link
               key={it.to}
               to={it.to}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
