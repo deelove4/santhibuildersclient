@@ -230,12 +230,6 @@ function ProjectDetailPage() {
             currentUserId={userId}
             onChanged={load}
           />
-
-            projectId={project.id}
-            stages={stages}
-            isAdmin={isAdmin}
-            onChanged={load}
-          />
         </TabsContent>
 
         <TabsContent value="media" className="mt-6">
