@@ -248,7 +248,7 @@ function ProjectDetailPage() {
   );
 }
 
-function ProgressRing({ value }: { value: number }) {
+function ProgressRing({ value, label }: { value: number; label?: string }) {
   const r = 34;
   const c = 2 * Math.PI * r;
   const dash = (Math.min(100, Math.max(0, value)) / 100) * c;
