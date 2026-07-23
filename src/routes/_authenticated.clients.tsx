@@ -1,8 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { NewClientDialog } from "@/components/clients/NewClientDialog";
+import { DeleteBtn } from "./_authenticated.projects.index";
+import { deleteClientAccount } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/clients")({
   beforeLoad: async () => {
@@ -54,14 +57,22 @@ function ClientsPage() {
     refresh();
   }, []);
 
+  async function handleDelete(id: string, name: string) {
+    try {
+      await deleteClientAccount({ data: { user_id: id } });
+      toast.success(`Removed ${name}`);
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
+    }
+  }
+
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-            Admin
-          </p>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Clients</h1>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Admin</p>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">Clients</h1>
         </div>
         <NewClientDialog onCreated={refresh} />
       </header>
@@ -73,37 +84,58 @@ function ClientsPage() {
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-16 text-center">
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center sm:p-16">
           <Users className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">No clients yet.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Name</th>
-                <th className="px-5 py-3">Email</th>
-                <th className="px-5 py-3">Phone</th>
-                <th className="px-5 py-3">Added</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-b-0">
-                  <td className="px-5 py-4 font-display font-semibold">
-                    {r.full_name ?? "—"}
-                  </td>
-                  <td className="px-5 py-4 text-muted-foreground">{r.email}</td>
-                  <td className="px-5 py-4 text-muted-foreground">{r.phone ?? "—"}</td>
-                  <td className="px-5 py-4 text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile cards */}
+          <div className="grid gap-3 sm:hidden">
+            {rows.map((r) => (
+              <div key={r.id} className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-display font-semibold">{r.full_name ?? "—"}</div>
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{r.email}</div>
+                    {r.phone && <div className="mt-0.5 text-xs text-muted-foreground">{r.phone}</div>}
+                  </div>
+                  <DeleteBtn onConfirm={() => handleDelete(r.id, r.full_name ?? r.email)} label={r.full_name ?? r.email} kind="client" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden overflow-hidden rounded-2xl border border-border bg-card sm:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">Name</th>
+                    <th className="px-5 py-3">Email</th>
+                    <th className="px-5 py-3">Phone</th>
+                    <th className="px-5 py-3">Added</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-b border-border last:border-b-0">
+                      <td className="px-5 py-4 font-display font-semibold">{r.full_name ?? "—"}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{r.email}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{r.phone ?? "—"}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-4 text-right">
+                        <DeleteBtn onConfirm={() => handleDelete(r.id, r.full_name ?? r.email)} label={r.full_name ?? r.email} kind="client" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

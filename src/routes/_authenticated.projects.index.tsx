@@ -1,9 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Building2, Search } from "lucide-react";
+import { Building2, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STAGES } from "@/lib/stages";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/lib/use-role";
 import { NewProjectDialog } from "@/components/projects/NewProjectDialog";
@@ -29,6 +42,7 @@ function ProjectsPage() {
   const [q, setQ] = useState("");
   const [userId, setUserId] = useState<string | undefined>();
   const role = useRole(userId);
+  const isAdmin = role === "admin";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
@@ -49,6 +63,16 @@ function ProjectsPage() {
     load();
   }, []);
 
+  async function handleDelete(id: string, name: string) {
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Deleted "${name}"`);
+    load();
+  }
+
   const filtered = rows.filter(
     (r) =>
       !q ||
@@ -58,25 +82,18 @@ function ProjectsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-8 py-10">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-            Portfolio
-          </p>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Projects</h1>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-10">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Portfolio</p>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">Projects</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative w-full max-w-xs">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="relative flex-1 sm:w-64 sm:flex-initial">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search projects…"
-              className="pl-9"
-            />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search projects…" className="pl-9" />
           </div>
-          {role === "admin" && <NewProjectDialog onCreated={load} />}
+          {isAdmin && <NewProjectDialog onCreated={load} />}
         </div>
       </header>
 
@@ -87,72 +104,110 @@ function ProjectsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-16 text-center">
+        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center sm:p-16">
           <Building2 className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">No projects found.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Project</th>
-                <th className="px-5 py-3">Stage</th>
-                <th className="px-5 py-3">Progress</th>
-                <th className="px-5 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const stage = STAGES.find((s) => s.key === r.current_stage_key);
-                return (
-                  <tr
-                    key={r.id}
-                    className="group border-b border-border last:border-b-0 transition-colors hover:bg-muted/30"
-                  >
-                    <td className="px-5 py-4">
-                      <Link
-                        to="/projects/$id"
-                        params={{ id: r.id }}
-                        className="block"
-                      >
-                        <div className="font-display font-semibold group-hover:text-primary">{r.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {r.villa_number ? `${r.villa_number} · ` : ""}
-                          {r.address ?? "—"}
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary"
-                            style={{ width: `${r.overall_progress}%` }}
-                          />
-                        </div>
-                        <span className="font-mono text-xs tabular-nums">{r.overall_progress}%</span>
+        <>
+          {/* Mobile: cards */}
+          <div className="grid gap-3 sm:hidden">
+            {filtered.map((r) => {
+              const stage = STAGES.find((s) => s.key === r.current_stage_key);
+              return (
+                <div key={r.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link to="/projects/$id" params={{ id: r.id }} className="min-w-0 flex-1">
+                      <div className="font-display font-semibold">{r.name}</div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {r.villa_number ? `${r.villa_number} · ` : ""}{r.address ?? "—"}
                       </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest",
-                          statusStyles(r.status),
-                        )}
-                      >
-                        {r.status.replace("_", " ")}
-                      </span>
-                    </td>
+                    </Link>
+                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest", statusStyles(r.status))}>
+                      {r.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="truncate text-xs text-muted-foreground">{stage?.name ?? "—"}</span>
+                    {isAdmin && <DeleteBtn onConfirm={() => handleDelete(r.id, r.name)} label={r.name} kind="project" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden overflow-hidden rounded-2xl border border-border bg-card sm:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">Project</th>
+                    <th className="px-5 py-3">Stage</th>
+                    <th className="px-5 py-3">Status</th>
+                    {isAdmin && <th className="px-5 py-3 text-right">Actions</th>}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => {
+                    const stage = STAGES.find((s) => s.key === r.current_stage_key);
+                    return (
+                      <tr key={r.id} className="group border-b border-border last:border-b-0 transition-colors hover:bg-muted/30">
+                        <td className="px-5 py-4">
+                          <Link to="/projects/$id" params={{ id: r.id }} className="block">
+                            <div className="font-display font-semibold group-hover:text-primary">{r.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {r.villa_number ? `${r.villa_number} · ` : ""}{r.address ?? "—"}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-5 py-4 text-muted-foreground">{stage?.name ?? "—"}</td>
+                        <td className="px-5 py-4">
+                          <span className={cn("rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest", statusStyles(r.status))}>
+                            {r.status.replace("_", " ")}
+                          </span>
+                        </td>
+                        {isAdmin && (
+                          <td className="px-5 py-4 text-right">
+                            <DeleteBtn onConfirm={() => handleDelete(r.id, r.name)} label={r.name} kind="project" />
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+export function DeleteBtn({ onConfirm, label, kind }: { onConfirm: () => void | Promise<void>; label: string; kind: string }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" aria-label={`Delete ${kind}`}>
+          <Trash2 className="size-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {kind}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove <span className="font-semibold text-foreground">{label}</span>. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => void onConfirm()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
