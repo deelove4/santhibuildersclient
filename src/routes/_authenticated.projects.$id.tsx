@@ -227,6 +227,13 @@ function ProjectDetailPage() {
             projectId={project.id}
             stages={stages}
             isAdmin={isAdmin}
+            currentUserId={userId}
+            onChanged={load}
+          />
+
+            projectId={project.id}
+            stages={stages}
+            isAdmin={isAdmin}
             onChanged={load}
           />
         </TabsContent>
