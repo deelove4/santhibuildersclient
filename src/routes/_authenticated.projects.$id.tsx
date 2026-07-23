@@ -167,32 +167,27 @@ function ProjectDetailPage() {
             )}
           </div>
 
-          {/* Progress ring card */}
+          {/* Time / stages card */}
           <div className="flex items-center gap-5 rounded-2xl border border-border bg-background/80 p-5 shadow-sm backdrop-blur lg:min-w-[260px]">
-            <ProgressRing value={project.overall_progress} />
+            <ProgressRing value={timeElapsed} label="Elapsed" />
             <div className="min-w-0">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Overall
+                Stages
               </div>
               <div className="mt-0.5 font-display text-sm font-semibold">
-                {completedCount} / {totalStages} stages done
+                {completedCount} / {totalStages} done
               </div>
               <div className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Time elapsed
+                Days remaining
               </div>
-              <div className="mt-1.5 h-1.5 w-32 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-accent"
-                  style={{ width: `${timeElapsed}%` }}
-                />
-              </div>
-              <div className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-                {timeElapsed}%
+              <div className="mt-0.5 font-display text-lg font-semibold tabular-nums">
+                {daysRemaining === null ? "—" : `${daysRemaining} days`}
               </div>
             </div>
           </div>
         </div>
       </section>
+
 
       {/* Meta cards */}
       <section className="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
