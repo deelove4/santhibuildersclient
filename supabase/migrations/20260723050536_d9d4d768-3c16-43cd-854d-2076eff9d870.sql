@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.notify_stage_admin_update() FROM PUBLIC, anon, authenticated;
