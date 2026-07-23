@@ -269,7 +269,8 @@ function ProgressRing({ value, label }: { value: number; label?: string }) {
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center">
-        <span className="font-display text-xl font-bold tabular-nums text-primary">{value}%</span>
+        <span className="font-display text-lg font-bold tabular-nums text-primary">{value}%</span>
+        {label && <span className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{label}</span>}
       </div>
     </div>
   );
