@@ -9,10 +9,7 @@ const CreateClientInput = z.object({
   password: z.string().min(10).max(128),
 });
 
-async function assertAdmin(context: { supabase: ReturnType<typeof requireSupabaseAuth> extends unknown ? never : never; userId: string } | {
-  supabase: import("@supabase/supabase-js").SupabaseClient;
-  userId: string;
-}) {
+async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data: adminRole, error } = await context.supabase
     .from("user_roles")
     .select("id")
